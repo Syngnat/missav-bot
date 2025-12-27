@@ -72,9 +72,12 @@ public class PushServiceImpl implements IPushService {
 
         if (!pushedChatIds.isEmpty()) {
             crawlerService.markAsPushed(video.getId());
+            log.info("视频 {} 已推送给 {} 个订阅者", video.getCode(), pushedChatIds.size());
+        } else {
+            // 没有订阅者，也标记为已推送，避免后续订阅时刷屏
+            crawlerService.markAsPushed(video.getId());
+            log.debug("视频 {} 没有订阅者，已标记为已推送", video.getCode());
         }
-
-        log.info("视频 {} 已推送给 {} 个订阅者", video.getCode(), pushedChatIds.size());
     }
 
     private void pushToChat(Video video, Long chatId) {
