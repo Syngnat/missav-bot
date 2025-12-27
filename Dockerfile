@@ -16,9 +16,6 @@ RUN mkdir -p /app/data /app/logs
 COPY --from=build /app/target/*.jar app.jar
 
 # 环境变量
-ENV BOT_TOKEN=""
-ENV BOT_USERNAME="MissavBot"
-ENV SPRING_PROFILES_ACTIVE="prod"
 ENV TZ=Asia/Shanghai
 
 # 健康检查
