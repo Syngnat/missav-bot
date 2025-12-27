@@ -9,7 +9,7 @@ services:
       MYSQL_DATABASE: missav_bot
       TZ: Asia/Shanghai
     ports:
-      - "3306:3306"
+      - "3308:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -30,7 +30,7 @@ services:
       BOT_TOKEN: ${BOT_TOKEN}
       BOT_USERNAME: ${BOT_USERNAME}
     ports:
-      - "8080:8080"
+      - "8000:8000"
     depends_on:
       mysql:
         condition: service_healthy
