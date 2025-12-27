@@ -30,6 +30,10 @@ services:
       BOT_TOKEN: ${BOT_TOKEN}
       BOT_USERNAME: ${BOT_USERNAME}
       BOT_CHAT_ID: ${BOT_CHAT_ID:-0}
+      # 日志级别配置（可选）
+      LOG_LEVEL_ROOT: ${LOG_LEVEL_ROOT:-INFO}
+      LOG_LEVEL_APP: ${LOG_LEVEL_APP:-INFO}
+      LOG_LEVEL_SQL: ${LOG_LEVEL_SQL:-INFO}
     ports:
       - "8000:8000"
     depends_on:

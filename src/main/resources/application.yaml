@@ -40,16 +40,18 @@ crawler:
 
 logging:
   level:
-    root: INFO
-    com.missav.bot: INFO
-    com.missav.bot.crawler: INFO
-    com.missav.bot.push: INFO
-    com.missav.bot.scheduler: INFO
-    org.telegram: WARN
-    com.zaxxer.hikari: WARN
-    org.springframework: WARN
-    # 如需调试 SQL，取消下面的注释
-    # com.missav.bot.**.mapper: DEBUG
+    root: ${LOG_LEVEL_ROOT:INFO}
+    com.missav.bot: ${LOG_LEVEL_APP:INFO}
+    com.missav.bot.crawler: ${LOG_LEVEL_CRAWLER:INFO}
+    com.missav.bot.push: ${LOG_LEVEL_PUSH:INFO}
+    com.missav.bot.scheduler: ${LOG_LEVEL_SCHEDULER:INFO}
+    org.telegram: ${LOG_LEVEL_TELEGRAM:WARN}
+    com.zaxxer.hikari: ${LOG_LEVEL_HIKARI:WARN}
+    org.springframework: ${LOG_LEVEL_SPRING:WARN}
+    # SQL 日志（mapper 级别）
+    com.missav.bot.video.mapper: ${LOG_LEVEL_SQL:INFO}
+    com.missav.bot.push.mapper: ${LOG_LEVEL_SQL:INFO}
+    com.missav.bot.subscription.mapper: ${LOG_LEVEL_SQL:INFO}
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

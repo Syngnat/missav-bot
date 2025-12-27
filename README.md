@@ -297,6 +297,45 @@ docker compose logs -f app
 - Java 应用: `8000`（主机） → `8000`（容器）
 - 健康检查: `http://localhost:8000/actuator/health`
 
+### 日志配置
+
+**调整日志级别**（可选，按需配置）：
+
+编辑 `.env` 文件：
+
+```bash
+# 查看所有 SQL（调试数据库问题）
+LOG_LEVEL_SQL=DEBUG
+
+# 查看应用详细日志（调试业务逻辑）
+LOG_LEVEL_APP=DEBUG
+
+# 查看爬虫详细日志（调试爬虫问题）
+LOG_LEVEL_CRAWLER=DEBUG
+
+# 查看推送详细日志（调试推送问题）
+LOG_LEVEL_PUSH=DEBUG
+```
+
+然后重启服务：
+
+```bash
+docker compose restart app
+```
+
+**日志级别说明**：
+- `ERROR` - 只显示错误
+- `WARN` - 警告 + 错误
+- `INFO` - 信息 + 警告 + 错误（默认，推荐生产环境）
+- `DEBUG` - 调试 + 信息 + 警告 + 错误（开发/调试用）
+- `TRACE` - 最详细，包含所有日志（不推荐）
+
+**常见场景**：
+- 🔍 **调试爬虫 403 问题**：`LOG_LEVEL_CRAWLER=DEBUG`
+- 🔍 **查看 SQL 执行**：`LOG_LEVEL_SQL=DEBUG`
+- 🔍 **调试推送失败**：`LOG_LEVEL_PUSH=DEBUG`
+- 🔍 **全局调试**：`LOG_LEVEL_APP=DEBUG`
+
 ### 常用命令
 
 ```bash
