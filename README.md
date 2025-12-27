@@ -10,6 +10,8 @@
 - 🚫 **自动去重** - 避免重复抓取和推送
 - 🔍 **视频搜索** - 支持按演员、标签搜索
 - 📊 **推送记录** - 完整的推送历史记录
+- 🎯 **自动发现群组** - 启动时自动发现并订阅所有 Bot 所在的群组
+- 🛡️ **防刷屏机制** - 智能去重，避免重启时重复推送
 
 ## 技术栈
 
@@ -18,6 +20,7 @@
 - MySQL 8.0
 - Telegram Bot API
 - Jsoup (网页解析)
+- Spring Boot Actuator (健康检查)
 
 ## 环境要求
 
@@ -240,6 +243,7 @@ logging:
 2. 发送 `/newbot` 创建机器人
 3. 按提示设置名称和用户名
 4. 复制获得的 Token(格式: `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`)
+5. **将 Bot 加入你的群组并发送任意消息**（重要！这样启动时会自动订阅）
 
 #### 2. 配置环境变量
 
@@ -248,40 +252,71 @@ logging:
 cp .env.example .env
 
 # 编辑 .env 文件,填入你的配置
-# DB_PASSWORD=设置一个安全的数据库密码
-# BOT_TOKEN=你的Bot Token
-# BOT_USERNAME=你的Bot用户名
+nano .env
+```
+
+`.env` 文件内容：
+
+```bash
+# 数据库密码（必填）
+DB_PASSWORD=your_secure_password
+
+# Telegram Bot Token（必填，从 @BotFather 获取）
+BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
+
+# Telegram Bot 用户名（必填）
+BOT_USERNAME=YourBotUsername
+
+# Telegram 群组 Chat ID（可选，推荐配置）
+# 获取方法：
+# 1. 将 bot 加入群组后，发送一条消息
+# 2. 访问：https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
+# 3. 在返回的 JSON 中找到 "chat":{"id": -100xxxxxxxxx}
+BOT_CHAT_ID=-1001234567890
 ```
 
 #### 3. 启动服务
 
 ```bash
 # 一键启动(自动构建镜像、创建数据库、启动服务)
-docker-compose up -d
+docker compose up -d --build
 
 # 查看日志
-docker-compose logs -f app
+docker compose logs -f app
 ```
 
-**完成!** 🎉 现在可以在 Telegram 中使用你的机器人了!
+**完成!** 🎉
+
+**自动发现群组功能**：
+- ✅ 如果在启动前已将 Bot 加入群组并发送过消息，Bot 会自动发现并订阅所有群组
+- ✅ 也可以手动配置 `BOT_CHAT_ID`，确保万无一失
+- ✅ 首次抓取的视频会自动推送到所有已订阅的群组
+
+**端口配置**：
+- MySQL: `3308`（主机） → `3308`（容器）
+- Java 应用: `8000`（主机） → `8000`（容器）
+- 健康检查: `http://localhost:8000/actuator/health`
 
 ### 常用命令
 
 ```bash
 # 查看运行状态
-docker-compose ps
+docker compose ps
 
 # 查看日志
-docker-compose logs -f app
+docker compose logs -f app
 
 # 重启服务
-docker-compose restart app
+docker compose restart app
 
 # 停止服务
-docker-compose down
+docker compose down
 
 # 停止并删除数据
-docker-compose down -v
+docker compose down -v
+
+# 重新构建（强制不使用缓存）
+docker compose build --no-cache
 ```
 
 ### 更新版本
@@ -291,34 +326,73 @@ docker-compose down -v
 git pull
 
 # 重新构建并启动
-docker-compose up -d --build
+docker compose down
+docker compose up -d --build
 ```
 
 ## 常见问题
 
-### 1. 启动失败: MyBatis-Plus 兼容性问题
+### 1. 启动失败: 数据源配置问题
 
-**解决方案**: 确保使用 mybatis-spring 3.0.3+ 版本
+**现象**: `Failed to configure a DataSource: 'url' attribute is not specified`
 
-```xml
-<dependency>
-    <groupId>org.mybatis</groupId>
-    <artifactId>mybatis-spring</artifactId>
-    <version>3.0.3</version>
-</dependency>
-```
+**原因**: Docker 镜像中缺少配置文件
+
+**解决方案**:
+- 确保已拉取最新代码（包含完整的 application.yaml）
+- 重新构建镜像：`docker compose build --no-cache`
 
 ### 2. 预览视频无法播放
 
-**原因**: 爬虫未能正确提取预览视频URL
+**原因**: 爬虫被网站拦截（403 错误）
 
-**解决方案**: 检查日志,确认爬虫是否成功抓取详情页
+**解决方案**:
+- 已改进请求头，模拟真实浏览器
+- 如仍然被拦截，可能需要：
+  - 增加爬取间隔时间
+  - 使用代理
+  - 考虑使用浏览器自动化工具
 
-### 3. 重复推送
+### 3. 会不会重复推送？
 
-**原因**: 推送记录表未正确记录
+**不会！** 项目有完善的去重机制：
 
-**解决方案**: 检查数据库连接和推送记录表
+- ✅ **推送记录表**: 每次推送都会记录到 `push_records` 表
+- ✅ **精确去重**: 基于 `(video_id, chat_id, status)` 三元组
+- ✅ **持久化**: 推送记录保存在数据库，服务重启不丢失
+- ✅ **防刷屏**: 即使反复重启，已推送的视频不会重复推送
+
+**场景示例**：
+- 首次启动：抓取 40 个视频 → 推送 → 记录到数据库 ✅
+- 立即重启：检查数据库 → 已推送，跳过 ✅
+- 推送一半崩溃：重启后只推送未推送的部分 ✅
+
+### 4. 首次部署没有推送
+
+**原因**: 启动时没有订阅者，视频被标记为已推送
+
+**解决方案**:
+- ✅ **已修复！** 现在启动时会自动发现并订阅所有群组
+- 建议：部署前先将 Bot 加入群组并发送消息
+- 或者：配置 `BOT_CHAT_ID` 环境变量
+
+### 5. 健康检查失败
+
+**现象**: Docker 容器显示 unhealthy
+
+**原因**: 缺少 Actuator 依赖
+
+**解决方案**:
+- ✅ **已修复！** 最新版本已包含 Actuator
+- 健康检查地址：`http://localhost:8000/actuator/health`
+
+### 6. MySQL 端口冲突
+
+**现象**: 3306 端口被占用
+
+**解决方案**:
+- ✅ **已调整！** 默认使用 3308 端口
+- 容器内外都是 3308，避免冲突
 
 ## 开发
 
