@@ -33,4 +33,27 @@ public interface ICrawlerService {
      * @param videoId 视频ID
      */
     void markAsPushed(Long videoId);
+
+    /**
+     * 按演员名爬取作品
+     * @param actorName 演员名
+     * @param limit 限制数量，null 表示全部
+     * @return 新爬取的视频列表
+     */
+    List<Video> crawlByActor(String actorName, Integer limit);
+
+    /**
+     * 按番号爬取作品
+     * @param code 番号
+     * @return 爬取的视频，不存在返回 null
+     */
+    Video crawlByCode(String code);
+
+    /**
+     * 按关键词搜索爬取
+     * @param keyword 关键词
+     * @param limit 限制数量，null 表示全部
+     * @return 新爬取的视频列表
+     */
+    List<Video> crawlByKeyword(String keyword, Integer limit);
 }

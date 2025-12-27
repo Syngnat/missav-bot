@@ -313,6 +313,115 @@ public class MissavCrawler {
     }
 
     /**
+     * 按演员名爬取作品
+     */
+    public List<Video> crawlByActor(String actorName, Integer limit) {
+        List<Video> videos = new ArrayList<>();
+        int page = 1;
+        int maxPages = limit != null ? (limit / 30 + 1) : Integer.MAX_VALUE; // 假设每页30个
+
+        try {
+            while (page <= maxPages) {
+                String url = BASE_URL + "/actresses/" + actorName + (page > 1 ? "?page=" + page : "");
+                log.info("正在抓取演员作品: {}", url);
+
+                String html = fetchHtml(url);
+                if (html == null) {
+                    break;
+                }
+
+                List<Video> pageVideos = parseVideoList(html);
+                if (pageVideos.isEmpty()) {
+                    break; // 没有更多视频了
+                }
+
+                videos.addAll(pageVideos);
+                log.info("演员 {} 第{}页抓取到{}个视频", actorName, page, pageVideos.size());
+
+                // 如果已达到限制数量，停止
+                if (limit != null && videos.size() >= limit) {
+                    videos = videos.subList(0, limit);
+                    break;
+                }
+
+                page++;
+                Thread.sleep(2000); // 避免请求过于频繁
+            }
+        } catch (Exception e) {
+            log.error("抓取演员 {} 的作品失败", actorName, e);
+        }
+
+        return videos;
+    }
+
+    /**
+     * 按番号爬取作品
+     */
+    public Video crawlByCode(String code) {
+        try {
+            // MissAV 的番号详情页 URL 格式通常是 /番号
+            String url = BASE_URL + "/" + code;
+            log.info("正在按番号爬取: {}", url);
+
+            String html = fetchHtml(url);
+            if (html == null) {
+                return null;
+            }
+
+            Video video = parseVideoDetail(html, url);
+            if (video != null && video.getCode() == null) {
+                video.setCode(code.toUpperCase());
+            }
+
+            return video;
+        } catch (Exception e) {
+            log.error("按番号 {} 爬取失败", code, e);
+            return null;
+        }
+    }
+
+    /**
+     * 按关键词搜索爬取
+     */
+    public List<Video> crawlByKeyword(String keyword, Integer limit) {
+        List<Video> videos = new ArrayList<>();
+        int page = 1;
+        int maxPages = limit != null ? (limit / 30 + 1) : Integer.MAX_VALUE;
+
+        try {
+            while (page <= maxPages) {
+                String url = BASE_URL + "/search/" + keyword + (page > 1 ? "?page=" + page : "");
+                log.info("正在搜索关键词: {}", url);
+
+                String html = fetchHtml(url);
+                if (html == null) {
+                    break;
+                }
+
+                List<Video> pageVideos = parseVideoList(html);
+                if (pageVideos.isEmpty()) {
+                    break;
+                }
+
+                videos.addAll(pageVideos);
+                log.info("关键词 {} 第{}页抓取到{}个视频", keyword, page, pageVideos.size());
+
+                if (limit != null && videos.size() >= limit) {
+                    videos = videos.subList(0, limit);
+                    break;
+                }
+
+                page++;
+                Thread.sleep(2000);
+            }
+        } catch (Exception e) {
+            log.error("搜索关键词 {} 失败", keyword, e);
+        }
+
+        return videos;
+    }
+
+    /**
      * 从文本中提取番号
      */
     private String extractCode(String text) {

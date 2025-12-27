@@ -5,6 +5,7 @@ import com.missav.bot.subscription.entity.Subscription.SubscriptionType;
 import com.missav.bot.video.entity.Video;
 import com.missav.bot.video.mapper.VideoMapper;
 import com.missav.bot.subscription.service.ISubscriptionService;
+import com.missav.bot.crawler.service.ICrawlerService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -26,6 +27,7 @@ public class MissavBot extends TelegramLongPollingBot {
 
     private final ISubscriptionService subscriptionService;
     private final VideoMapper videoMapper;
+    private final ICrawlerService crawlerService;
 
     @Value("${telegram.bot.token}")
     private String botToken;
@@ -33,9 +35,10 @@ public class MissavBot extends TelegramLongPollingBot {
     @Value("${telegram.bot.username:MissavBot}")
     private String botUsername;
 
-    public MissavBot(ISubscriptionService subscriptionService, VideoMapper videoMapper) {
+    public MissavBot(ISubscriptionService subscriptionService, VideoMapper videoMapper, ICrawlerService crawlerService) {
         this.subscriptionService = subscriptionService;
         this.videoMapper = videoMapper;
+        this.crawlerService = crawlerService;
     }
 
     @Override
@@ -100,6 +103,7 @@ public class MissavBot extends TelegramLongPollingBot {
             case "/list" -> handleList(chatId);
             case "/search" -> handleSearch(chatId, args);
             case "/latest" -> handleLatest(chatId, args);
+            case "/crawl" -> handleCrawl(chatId, args);
             case "/status" -> handleStatus(chatId);
             default -> sendText(chatId, "❓ 未知命令，输入 /help 查看帮助");
         }
@@ -126,6 +130,11 @@ public class MissavBot extends TelegramLongPollingBot {
             /search 关键词 - 搜索视频
             /latest - 查看最新视频
             /status - 查看机器人状态
+
+            📌 *手动爬取命令*
+            /crawl actor 演员名 [数量] - 爬取演员作品
+            /crawl code 番号 - 爬取指定番号
+            /crawl search 关键词 [数量] - 搜索并爬取
 
             💡 有新视频时会自动推送到本群
             """;
@@ -296,6 +305,178 @@ public class MissavBot extends TelegramLongPollingBot {
             ✅ 运行正常
             """, videoCount);
         sendMarkdown(chatId, status);
+    }
+
+    /**
+     * 处理手动爬取命令
+     */
+    private void handleCrawl(Long chatId, String args) {
+        if (args.isEmpty()) {
+            sendText(chatId, """
+                ❓ 请指定爬取方式:
+
+                /crawl actor 演员名 [数量]
+                /crawl code 番号
+                /crawl search 关键词 [数量]
+
+                示例:
+                /crawl actor 三上悠亚 10
+                /crawl code SSIS-001
+                /crawl search SSIS 20
+                """);
+            return;
+        }
+
+        String[] parts = args.split("\\s+", 3);
+        String crawlType = parts[0].toLowerCase();
+
+        try {
+            switch (crawlType) {
+                case "actor", "actress" -> handleCrawlByActor(chatId, parts);
+                case "code" -> handleCrawlByCode(chatId, parts);
+                case "search", "keyword" -> handleCrawlBySearch(chatId, parts);
+                default -> sendText(chatId, "❌ 未知的爬取类型，请使用: actor、code 或 search");
+            }
+        } catch (Exception e) {
+            log.error("爬取失败", e);
+            sendText(chatId, "❌ 爬取失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 按演员爬取
+     */
+    private void handleCrawlByActor(Long chatId, String[] parts) {
+        if (parts.length < 2) {
+            sendText(chatId, "❌ 请指定演员名，例如: /crawl actor 三上悠亚 10");
+            return;
+        }
+
+        String actorName = parts[1];
+        Integer limit = null;
+
+        if (parts.length >= 3) {
+            try {
+                limit = Integer.parseInt(parts[2]);
+            } catch (NumberFormatException e) {
+                sendText(chatId, "❌ 数量必须是数字");
+                return;
+            }
+        }
+
+        sendText(chatId, String.format("⏳ 正在爬取演员「%s」的作品...", actorName));
+
+        // 创建 final 变量供 lambda 使用
+        final Integer finalLimit = limit;
+        final ICrawlerService service = this.crawlerService;
+
+        // 异步执行爬取，避免阻塞
+        new Thread(() -> {
+            try {
+                List<Video> videos = service.crawlByActor(actorName, finalLimit);
+
+                if (videos.isEmpty()) {
+                    sendText(chatId, String.format("🔍 未找到演员「%s」的作品", actorName));
+                    return;
+                }
+
+                sendText(chatId, String.format("✅ 爬取完成，共找到 %d 个作品", videos.size()));
+
+                // 推送每个视频给触发者
+                for (Video video : videos) {
+                    pushVideo(chatId, video);
+                    Thread.sleep(1000); // 避免发送过快
+                }
+            } catch (Exception e) {
+                log.error("爬取演员作品失败", e);
+                sendText(chatId, "❌ 爬取失败：" + e.getMessage());
+            }
+        }).start();
+    }
+
+    /**
+     * 按番号爬取
+     */
+    private void handleCrawlByCode(Long chatId, String[] parts) {
+        if (parts.length < 2) {
+            sendText(chatId, "❌ 请指定番号，例如: /crawl code SSIS-001");
+            return;
+        }
+
+        String code = parts[1].toUpperCase();
+        sendText(chatId, String.format("⏳ 正在爬取番号「%s」...", code));
+
+        // 创建 final 变量供 lambda 使用
+        final ICrawlerService service = this.crawlerService;
+
+        // 异步执行爬取
+        new Thread(() -> {
+            try {
+                Video video = service.crawlByCode(code);
+
+                if (video == null) {
+                    sendText(chatId, String.format("🔍 未找到番号「%s」", code));
+                    return;
+                }
+
+                sendText(chatId, "✅ 爬取成功");
+                pushVideo(chatId, video);
+            } catch (Exception e) {
+                log.error("爬取番号失败", e);
+                sendText(chatId, "❌ 爬取失败：" + e.getMessage());
+            }
+        }).start();
+    }
+
+    /**
+     * 按关键词搜索爬取
+     */
+    private void handleCrawlBySearch(Long chatId, String[] parts) {
+        if (parts.length < 2) {
+            sendText(chatId, "❌ 请指定关键词，例如: /crawl search SSIS 20");
+            return;
+        }
+
+        String keyword = parts[1];
+        Integer limit = null;
+
+        if (parts.length >= 3) {
+            try {
+                limit = Integer.parseInt(parts[2]);
+            } catch (NumberFormatException e) {
+                sendText(chatId, "❌ 数量必须是数字");
+                return;
+            }
+        }
+
+        sendText(chatId, String.format("⏳ 正在搜索「%s」...", keyword));
+
+        // 创建 final 变量供 lambda 使用
+        final Integer finalLimit = limit;
+        final ICrawlerService service = this.crawlerService;
+
+        // 异步执行爬取
+        new Thread(() -> {
+            try {
+                List<Video> videos = service.crawlByKeyword(keyword, finalLimit);
+
+                if (videos.isEmpty()) {
+                    sendText(chatId, String.format("🔍 未找到关键词「%s」相关的作品", keyword));
+                    return;
+                }
+
+                sendText(chatId, String.format("✅ 搜索完成，共找到 %d 个作品", videos.size()));
+
+                // 推送每个视频给触发者
+                for (Video video : videos) {
+                    pushVideo(chatId, video);
+                    Thread.sleep(1000);
+                }
+            } catch (Exception e) {
+                log.error("搜索爬取失败", e);
+                sendText(chatId, "❌ 爬取失败：" + e.getMessage());
+            }
+        }).start();
     }
 
     /**
