@@ -153,9 +153,23 @@ public class MissavCrawler {
         List<Video> videos = new ArrayList<>();
         Document doc = Jsoup.parse(html);
 
-        // 根据missav.ai的页面结构解析视频卡片
-        // 注意：实际选择器可能需要根据网站结构调整
+        // 尝试多种选择器
         Elements videoCards = doc.select("div.video-card, article.video, div[class*=thumbnail]");
+        log.debug("选择器1匹配到 {} 个元素", videoCards.size());
+
+        if (videoCards.isEmpty()) {
+            // 尝试更通用的选择器
+            videoCards = doc.select("div.group");
+            log.debug("选择器2(div.group)匹配到 {} 个元素", videoCards.size());
+        }
+
+        if (videoCards.isEmpty()) {
+            // 尝试查找所有包含视频链接的元素
+            videoCards = doc.select("a[href*='/']");
+            log.debug("选择器3(a[href])匹配到 {} 个元素", videoCards.size());
+        }
+
+        log.info("最终使用的选择器匹配到 {} 个视频卡片", videoCards.size());
 
         for (Element card : videoCards) {
             try {
