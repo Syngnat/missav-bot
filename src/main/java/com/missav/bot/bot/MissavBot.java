@@ -132,9 +132,12 @@ public class MissavBot extends TelegramLongPollingBot {
             /status - 查看机器人状态
 
             📌 *手动爬取命令*
-            /crawl actor 演员名 [数量] - 爬取演员作品
-            /crawl code 番号 - 爬取指定番号
-            /crawl search 关键词 [数量] - 搜索并爬取
+            /crawl actor 演员名 [数量]
+              示例: /crawl actor 三上悠亚 10
+            /crawl code 番号
+              示例: /crawl code SSIS-001
+            /crawl search 关键词 [数量]
+              示例: /crawl search SSIS 20
 
             💡 有新视频时会自动推送到本群
             """;
