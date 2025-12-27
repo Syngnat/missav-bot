@@ -1,0 +1,53 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: missav-bot
+
+  sql:
+    init:
+      mode: never
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/missav_bot?useSSL=false&serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:your_password}
+
+# MyBatis-Plus配置
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# Telegram Bot配置
+telegram:
+  bot:
+    token: ${BOT_TOKEN:YOUR_BOT_TOKEN}
+    username: ${BOT_USERNAME:YOUR_BOT_USERNAME}
+    default-chat-id: YOUR_DEFAULT_CHAT_ID
+
+# 爬虫配置
+crawler:
+  enabled: true
+  interval: 900000
+  initial-pages: 2
+  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.missav.bot: DEBUG
+    org.telegram: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/missav-bot.log
