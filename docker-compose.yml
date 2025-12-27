@@ -29,6 +29,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       BOT_TOKEN: ${BOT_TOKEN}
       BOT_USERNAME: ${BOT_USERNAME}
+      BOT_CHAT_ID: ${BOT_CHAT_ID:-0}
     ports:
       - "8000:8000"
     depends_on:
