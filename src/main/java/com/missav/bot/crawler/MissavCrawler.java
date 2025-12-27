@@ -153,6 +153,14 @@ public class MissavCrawler {
         List<Video> videos = new ArrayList<>();
         Document doc = Jsoup.parse(html);
 
+        // 输出页面基本信息用于调试
+        log.info("页面标题: {}", doc.title());
+        log.info("页面包含的主要 div 类: {}", doc.select("div[class]").stream()
+            .limit(10)
+            .map(e -> e.className())
+            .distinct()
+            .toList());
+
         // 尝试多种选择器
         Elements videoCards = doc.select("div.video-card, article.video, div[class*=thumbnail]");
         log.debug("选择器1匹配到 {} 个元素", videoCards.size());
@@ -167,6 +175,18 @@ public class MissavCrawler {
             // 尝试查找所有包含视频链接的元素
             videoCards = doc.select("a[href*='/']");
             log.debug("选择器3(a[href])匹配到 {} 个元素", videoCards.size());
+
+            // 如果找到了链接，过滤出可能是视频的链接
+            if (!videoCards.isEmpty()) {
+                videoCards = videoCards.stream()
+                    .filter(e -> {
+                        String href = e.attr("href");
+                        // 过滤出包含番号模式的链接
+                        return href != null && CODE_PATTERN.matcher(href).find();
+                    })
+                    .collect(Elements::new, Elements::add, Elements::addAll);
+                log.info("过滤后包含番号的链接: {} 个", videoCards.size());
+            }
         }
 
         log.info("最终使用的选择器匹配到 {} 个视频卡片", videoCards.size());
