@@ -1,5 +1,6 @@
 package com.missav.bot.scheduler;
 
+import com.missav.bot.bot.MissavBot;
 import com.missav.bot.subscription.entity.Subscription.SubscriptionType;
 import com.missav.bot.video.entity.Video;
 import com.missav.bot.crawler.service.ICrawlerService;
@@ -23,6 +24,7 @@ public class CrawlScheduler {
     private final ICrawlerService crawlerService;
     private final IPushService pushService;
     private final ISubscriptionService subscriptionService;
+    private final MissavBot missavBot;
 
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
 
@@ -40,12 +42,34 @@ public class CrawlScheduler {
      */
     @PostConstruct
     public void init() {
-        // 自动为默认群组创建订阅
-        if (defaultChatId != 0) {
+        // 1. 自动发现并订阅所有群组/频道
+        log.info("正在自动发现 Bot 所在的群组/频道...");
+        List<Long> chatIds = missavBot.getAllChatIds();
+
+        if (!chatIds.isEmpty()) {
+            log.info("发现 {} 个群组/频道，正在创建订阅...", chatIds.size());
+            for (Long chatId : chatIds) {
+                try {
+                    subscriptionService.subscribe(chatId, "supergroup", SubscriptionType.ALL, null);
+                    log.info("已自动订阅群组: {}", chatId);
+                } catch (Exception e) {
+                    log.warn("订阅群组失败: chatId={}, error={}", chatId, e.getMessage());
+                }
+            }
+        } else {
+            log.warn("未发现任何群组/频道。建议：");
+            log.warn("1. 将 Bot 加入群组");
+            log.warn("2. 在群组中发送任意消息（如 /start）");
+            log.warn("3. 重启应用，或在 .env 中配置 BOT_CHAT_ID");
+        }
+
+        // 2. 如果配置了默认 Chat ID，也创建订阅
+        if (defaultChatId != 0 && !chatIds.contains(defaultChatId)) {
             subscriptionService.subscribe(defaultChatId, "supergroup", SubscriptionType.ALL, null);
             log.info("已自动订阅默认群组: {}", defaultChatId);
         }
 
+        // 3. 执行首次抓取
         if (crawlerEnabled) {
             log.info("机器人启动，执行首次抓取...");
             // 异步执行，避免阻塞启动

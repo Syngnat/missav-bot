@@ -17,7 +17,8 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.util.List;
+import java.util.*;
+
 
 @Slf4j
 @Component
@@ -404,5 +405,40 @@ public class MissavBot extends TelegramLongPollingBot {
     private String truncate(String text, int maxLength) {
         if (text == null) return "";
         return text.length() <= maxLength ? text : text.substring(0, maxLength) + "...";
+    }
+
+    /**
+     * 获取 Bot 所在的所有群组/频道的 Chat ID
+     * 通过 getUpdates 获取最近的消息，从中提取 chat 信息
+     */
+    public List<Long> getAllChatIds() {
+        try {
+            org.telegram.telegrambots.meta.api.methods.updates.GetUpdates getUpdates =
+                new org.telegram.telegrambots.meta.api.methods.updates.GetUpdates();
+            getUpdates.setLimit(100); // 获取最近 100 条消息
+            getUpdates.setOffset(-1);
+
+            List<Update> updates = execute(getUpdates);
+            Set<Long> chatIds = new HashSet<>();
+
+            for (Update update : updates) {
+                if (update.hasMessage() && update.getMessage().getChat() != null) {
+                    Long chatId = update.getMessage().getChat().getId();
+                    String chatType = update.getMessage().getChat().getType();
+
+                    // 只收集群组和频道，不包括私聊
+                    if ("group".equals(chatType) || "supergroup".equals(chatType) || "channel".equals(chatType)) {
+                        chatIds.add(chatId);
+                        log.info("发现群组/频道: chatId={}, type={}, title={}",
+                            chatId, chatType, update.getMessage().getChat().getTitle());
+                    }
+                }
+            }
+
+            return new ArrayList<>(chatIds);
+        } catch (TelegramApiException e) {
+            log.error("获取 chat 列表失败", e);
+            return new ArrayList<>();
+        }
     }
 }
