@@ -9,11 +9,11 @@ services:
       MYSQL_DATABASE: missav_bot
       TZ: Asia/Shanghai
     ports:
-      - "3308:3306"
+      - "3308:3308"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --port=3308
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s

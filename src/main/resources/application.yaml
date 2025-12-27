@@ -10,7 +10,7 @@ spring:
       mode: never
 
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:3306/missav_bot?useSSL=false&serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${DB_HOST:localhost}:3308/missav_bot?useSSL=false&serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:your_password}
