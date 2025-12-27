@@ -2,9 +2,7 @@ package com.missav.bot.crawler;
 
 import com.missav.bot.video.entity.Video;
 import lombok.extern.slf4j.Slf4j;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import okhttp3.*;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -18,8 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,6 +32,7 @@ public class MissavCrawler {
     private static final Pattern DURATION_PATTERN = Pattern.compile("(\\d+)\\s*分");
 
     private final OkHttpClient httpClient;
+    private final Map<String, List<Cookie>> cookieStore = new HashMap<>();
 
     @Value("${crawler.user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36}")
     private String userAgent;
@@ -45,7 +43,33 @@ public class MissavCrawler {
                 .readTimeout(30, TimeUnit.SECONDS)
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .followRedirects(true)
+                .cookieJar(new CookieJar() {
+                    @Override
+                    public void saveFromResponse(HttpUrl url, List<Cookie> cookies) {
+                        cookieStore.put(url.host(), cookies);
+                    }
+
+                    @Override
+                    public List<Cookie> loadForRequest(HttpUrl url) {
+                        List<Cookie> cookies = cookieStore.get(url.host());
+                        return cookies != null ? cookies : new ArrayList<>();
+                    }
+                })
                 .build();
+    }
+
+    /**
+     * 初始化 Cookie - 访问一个可以访问的页面获取 Cookie
+     */
+    private void initCookies() {
+        try {
+            log.info("初始化 Cookie...");
+            // 访问第二页获取 Cookie（第一页会 403）
+            fetchHtml(NEW_VIDEOS_URL + "?page=2");
+            log.info("Cookie 初始化完成");
+        } catch (Exception e) {
+            log.warn("Cookie 初始化失败", e);
+        }
     }
 
     /**
@@ -359,6 +383,7 @@ public class MissavCrawler {
         int maxPages = limit != null ? (limit / 30 + 1) : Integer.MAX_VALUE;
 
         try {
+            initCookies();
             String encodedName = URLEncoder.encode(actorName, StandardCharsets.UTF_8);
             while (page <= maxPages) {
                 String url = BASE_URL + "/actresses/" + encodedName + (page > 1 ? "?page=" + page : "");
@@ -427,6 +452,7 @@ public class MissavCrawler {
         int maxPages = limit != null ? (limit / 30 + 1) : Integer.MAX_VALUE;
 
         try {
+            initCookies();
             String encodedKeyword = URLEncoder.encode(keyword, StandardCharsets.UTF_8);
             while (page <= maxPages) {
                 String url = BASE_URL + "/search/" + encodedKeyword + (page > 1 ? "?page=" + page : "");
