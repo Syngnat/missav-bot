@@ -104,19 +104,32 @@ public class MissavCrawler {
     }
 
     private String fetchHtml(String url) {
+        // 添加随机延迟，避免请求过快
+        try {
+            Thread.sleep(1000 + (long)(Math.random() * 2000)); // 1-3秒随机延迟
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         Request request = new Request.Builder()
                 .url(url)
                 .header("User-Agent", userAgent)
-                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
                 .header("Accept-Language", "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7")
-                .header("Accept-Encoding", "gzip, deflate, br")
+                .header("Accept-Encoding", "gzip, deflate, br, zstd")
+                .header("Referer", "https://missav.ai/")
+                .header("Origin", "https://missav.ai")
                 .header("Connection", "keep-alive")
                 .header("Upgrade-Insecure-Requests", "1")
                 .header("Sec-Fetch-Dest", "document")
                 .header("Sec-Fetch-Mode", "navigate")
-                .header("Sec-Fetch-Site", "none")
+                .header("Sec-Fetch-Site", "same-origin")
                 .header("Sec-Fetch-User", "?1")
+                .header("Sec-Ch-Ua", "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"")
+                .header("Sec-Ch-Ua-Mobile", "?0")
+                .header("Sec-Ch-Ua-Platform", "\"Windows\"")
                 .header("Cache-Control", "max-age=0")
+                .header("DNT", "1")
                 .build();
 
         try (Response response = httpClient.newCall(request).execute()) {
