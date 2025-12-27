@@ -62,6 +62,12 @@ public class MissavCrawler {
      * 初始化 Cookie - 访问一个可以访问的页面获取 Cookie
      */
     private void initCookies() {
+        // 如果已有 Cookie，跳过初始化
+        if (!cookieStore.isEmpty()) {
+            log.debug("Cookie 已存在，跳过初始化");
+            return;
+        }
+
         try {
             log.info("初始化 Cookie...");
             // 访问第二页获取 Cookie（第一页会 403）
