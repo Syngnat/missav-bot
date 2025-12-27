@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -318,11 +320,12 @@ public class MissavCrawler {
     public List<Video> crawlByActor(String actorName, Integer limit) {
         List<Video> videos = new ArrayList<>();
         int page = 1;
-        int maxPages = limit != null ? (limit / 30 + 1) : Integer.MAX_VALUE; // 假设每页30个
+        int maxPages = limit != null ? (limit / 30 + 1) : Integer.MAX_VALUE;
 
         try {
+            String encodedName = URLEncoder.encode(actorName, StandardCharsets.UTF_8);
             while (page <= maxPages) {
-                String url = BASE_URL + "/actresses/" + actorName + (page > 1 ? "?page=" + page : "");
+                String url = BASE_URL + "/actresses/" + encodedName + (page > 1 ? "?page=" + page : "");
                 log.info("正在抓取演员作品: {}", url);
 
                 String html = fetchHtml(url);
@@ -332,20 +335,19 @@ public class MissavCrawler {
 
                 List<Video> pageVideos = parseVideoList(html);
                 if (pageVideos.isEmpty()) {
-                    break; // 没有更多视频了
+                    break;
                 }
 
                 videos.addAll(pageVideos);
                 log.info("演员 {} 第{}页抓取到{}个视频", actorName, page, pageVideos.size());
 
-                // 如果已达到限制数量，停止
                 if (limit != null && videos.size() >= limit) {
                     videos = videos.subList(0, limit);
                     break;
                 }
 
                 page++;
-                Thread.sleep(2000); // 避免请求过于频繁
+                Thread.sleep(2000);
             }
         } catch (Exception e) {
             log.error("抓取演员 {} 的作品失败", actorName, e);
@@ -389,8 +391,9 @@ public class MissavCrawler {
         int maxPages = limit != null ? (limit / 30 + 1) : Integer.MAX_VALUE;
 
         try {
+            String encodedKeyword = URLEncoder.encode(keyword, StandardCharsets.UTF_8);
             while (page <= maxPages) {
-                String url = BASE_URL + "/search/" + keyword + (page > 1 ? "?page=" + page : "");
+                String url = BASE_URL + "/search/" + encodedKeyword + (page > 1 ? "?page=" + page : "");
                 log.info("正在搜索关键词: {}", url);
 
                 String html = fetchHtml(url);
