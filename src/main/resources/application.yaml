@@ -33,9 +33,10 @@ telegram:
     default-chat-id: ${BOT_CHAT_ID:0}
 
 crawler:
-  enabled: true
-  interval: 900000
-  initial-pages: 2
+  enabled: ${CRAWLER_ENABLED:true}
+  interval: ${CRAWLER_INTERVAL:900000}  # 爬取间隔（毫秒），默认15分钟
+  initial-pages: ${CRAWLER_INITIAL_PAGES:2}  # 首次启动爬取页数
+  cleanup-cron: ${CRAWLER_CLEANUP_CRON:0 0 3 * * ?}  # 清理任务 cron 表达式，默认每天凌晨3点
   user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
 
 logging:

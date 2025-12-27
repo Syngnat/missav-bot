@@ -111,9 +111,9 @@ public class CrawlScheduler {
     }
 
     /**
-     * 每天凌晨3点清理30天前的推送记录
+     * 定期清理旧推送记录
      */
-    @Scheduled(cron = "0 0 3 * * ?")
+    @Scheduled(cron = "${crawler.cleanup-cron:0 0 3 * * ?}")
     public void cleanupOldRecords() {
         log.info("执行清理任务...");
         // 可以在这里添加清理逻辑
