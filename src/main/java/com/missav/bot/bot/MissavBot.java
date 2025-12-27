@@ -103,7 +103,7 @@ public class MissavBot extends TelegramLongPollingBot {
             case "/list" -> handleList(chatId);
             case "/search" -> handleSearch(chatId, args);
             case "/latest" -> handleLatest(chatId, args);
-            case "/crawl" -> handleCrawl(chatId, args);
+            case "/crawl" -> handleCrawl(chatId, chatType, args);
             case "/status" -> handleStatus(chatId);
             default -> sendText(chatId, "❓ 未知命令，输入 /help 查看帮助");
         }
@@ -313,7 +313,7 @@ public class MissavBot extends TelegramLongPollingBot {
     /**
      * 处理手动爬取命令
      */
-    private void handleCrawl(Long chatId, String args) {
+    private void handleCrawl(Long chatId, String chatType, String args) {
         if (args.isEmpty()) {
             sendText(chatId, """
                 ❓ 请指定爬取方式:
@@ -335,9 +335,9 @@ public class MissavBot extends TelegramLongPollingBot {
 
         try {
             switch (crawlType) {
-                case "actor", "actress" -> handleCrawlByActor(chatId, parts);
+                case "actor", "actress" -> handleCrawlByActor(chatId, chatType, parts);
                 case "code" -> handleCrawlByCode(chatId, parts);
-                case "search", "keyword" -> handleCrawlBySearch(chatId, parts);
+                case "search", "keyword" -> handleCrawlBySearch(chatId, chatType, parts);
                 default -> sendText(chatId, "❌ 未知的爬取类型，请使用: actor、code 或 search");
             }
         } catch (Exception e) {
@@ -349,7 +349,13 @@ public class MissavBot extends TelegramLongPollingBot {
     /**
      * 按演员爬取
      */
-    private void handleCrawlByActor(Long chatId, String[] parts) {
+    private void handleCrawlByActor(Long chatId, String chatType, String[] parts) {
+        // 安全检查：仅允许私聊使用
+        if (!"private".equals(chatType)) {
+            sendText(chatId, "⚠️ 为保护隐私安全，演员爬取功能仅支持私聊使用");
+            return;
+        }
+
         if (parts.length < 2) {
             sendText(chatId, "❌ 请指定演员名，例如: /crawl actor 三上悠亚 10");
             return;
@@ -434,7 +440,13 @@ public class MissavBot extends TelegramLongPollingBot {
     /**
      * 按关键词搜索爬取
      */
-    private void handleCrawlBySearch(Long chatId, String[] parts) {
+    private void handleCrawlBySearch(Long chatId, String chatType, String[] parts) {
+        // 安全检查：仅允许私聊使用
+        if (!"private".equals(chatType)) {
+            sendText(chatId, "⚠️ 为保护隐私安全，关键词搜索功能仅支持私聊使用");
+            return;
+        }
+
         if (parts.length < 2) {
             sendText(chatId, "❌ 请指定关键词，例如: /crawl search SSIS 20");
             return;
