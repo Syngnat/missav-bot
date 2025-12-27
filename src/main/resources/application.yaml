@@ -18,7 +18,8 @@ spring:
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # 生产环境关闭 SQL 日志，开发时可以打开
+    # log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
   global-config:
     db-config:
       id-type: auto
@@ -40,8 +41,15 @@ crawler:
 logging:
   level:
     root: INFO
-    com.missav.bot: DEBUG
-    org.telegram: INFO
+    com.missav.bot: INFO
+    com.missav.bot.crawler: INFO
+    com.missav.bot.push: INFO
+    com.missav.bot.scheduler: INFO
+    org.telegram: WARN
+    com.zaxxer.hikari: WARN
+    org.springframework: WARN
+    # 如需调试 SQL，取消下面的注释
+    # com.missav.bot.**.mapper: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
