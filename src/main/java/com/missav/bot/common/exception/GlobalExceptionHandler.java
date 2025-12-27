@@ -40,6 +40,14 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 处理静态资源未找到异常（降级为DEBUG，避免日志污染）
+     */
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public void handleNoResourceFound(org.springframework.web.servlet.resource.NoResourceFoundException e) {
+        log.debug("静态资源未找到: {}", e.getResourcePath());
+    }
+
+    /**
      * 处理通用异常
      */
     @ExceptionHandler(Exception.class)
