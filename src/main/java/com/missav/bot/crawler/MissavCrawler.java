@@ -135,11 +135,23 @@ public class MissavCrawler {
                 .build();
 
         try (Response response = httpClient.newCall(request).execute()) {
+            log.info("HTTP 响应状态: {} - {}", response.code(), response.message());
+            log.info("最终 URL (重定向后): {}", response.request().url());
+
             if (!response.isSuccessful()) {
                 log.warn("请求失败: {} - {}", url, response.code());
                 return null;
             }
-            return response.body() != null ? response.body().string() : null;
+
+            String html = response.body() != null ? response.body().string() : null;
+            if (html != null) {
+                log.info("HTML 长度: {} 字符", html.length());
+                log.info("HTML 前500字符: {}", html.substring(0, Math.min(500, html.length())));
+            } else {
+                log.warn("响应体为空");
+            }
+
+            return html;
         } catch (IOException e) {
             log.error("请求异常: {}", url, e);
             return null;
