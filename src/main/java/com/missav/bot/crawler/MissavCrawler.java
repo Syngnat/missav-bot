@@ -59,7 +59,7 @@ public class MissavCrawler {
     }
 
     /**
-     * 初始化 Cookie - 访问一个可以访问的页面获取 Cookie
+     * 初始化 Cookie - 多次请求建立会话
      */
     private void initCookies() {
         // 如果已有 Cookie，跳过初始化
@@ -69,9 +69,14 @@ public class MissavCrawler {
         }
 
         try {
-            log.info("初始化 Cookie...");
-            // 访问第二页获取 Cookie（第一页会 403）
-            fetchHtml(NEW_VIDEOS_URL + "?page=2");
+            log.info("初始化 Cookie（预热会话）...");
+            // 网站需要多次请求才能建立有效会话，进行 2-3 次预热请求
+            for (int i = 1; i <= 3; i++) {
+                fetchHtml(NEW_VIDEOS_URL + "?page=2");
+                if (i < 3) {
+                    Thread.sleep(1000); // 请求间隔 1 秒
+                }
+            }
             log.info("Cookie 初始化完成");
         } catch (Exception e) {
             log.warn("Cookie 初始化失败", e);
