@@ -208,8 +208,8 @@ public class MissavCrawler {
         Document doc = Jsoup.parse(html);
 
         // 输出页面基本信息用于调试
-        log.debug("页面标题: {}", doc.title());
-        log.debug("页面包含的主要 div 类: {}", doc.select("div[class]").stream()
+        log.info("页面标题: {}", doc.title());
+        log.info("页面包含的主要 div 类: {}", doc.select("div[class]").stream()
             .limit(10)
             .map(e -> e.className())
             .distinct()
@@ -217,18 +217,18 @@ public class MissavCrawler {
 
         // 尝试多种选择器
         Elements videoCards = doc.select("div.video-card, article.video, div[class*=thumbnail]");
-        log.debug("选择器1匹配到 {} 个元素", videoCards.size());
+        log.info("选择器1匹配到 {} 个元素", videoCards.size());
 
         if (videoCards.isEmpty()) {
             // 尝试更通用的选择器
             videoCards = doc.select("div.group");
-            log.debug("选择器2(div.group)匹配到 {} 个元素", videoCards.size());
+            log.info("选择器2(div.group)匹配到 {} 个元素", videoCards.size());
         }
 
         if (videoCards.isEmpty()) {
             // 尝试查找所有包含视频链接的元素
             videoCards = doc.select("a[href*='/']");
-            log.debug("选择器3(a[href])匹配到 {} 个元素", videoCards.size());
+            log.info("选择器3(a[href])匹配到 {} 个元素", videoCards.size());
 
             // 如果找到了链接，过滤出可能是视频的链接
             if (!videoCards.isEmpty()) {
@@ -243,7 +243,13 @@ public class MissavCrawler {
             }
         }
 
-        log.debug("最终使用的选择器匹配到 {} 个视频卡片", videoCards.size());
+        log.info("最终使用的选择器匹配到 {} 个视频卡片", videoCards.size());
+
+        // 如果还是没找到，输出HTML片段用于调试
+        if (videoCards.isEmpty()) {
+            log.warn("未找到任何视频卡片，输出HTML前1000字符用于调试:");
+            log.warn(html.substring(0, Math.min(1000, html.length())));
+        }
 
         for (Element card : videoCards) {
             try {
