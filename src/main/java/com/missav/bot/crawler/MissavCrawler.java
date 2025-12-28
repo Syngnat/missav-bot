@@ -91,6 +91,8 @@ public class MissavCrawler {
     public List<Video> crawlNewVideos(int pages) {
         List<Video> videos = new ArrayList<>();
 
+        initCookies();
+
         for (int page = 1; page <= pages; page++) {
             try {
                 String url = page == 1 ? NEW_VIDEOS_URL : NEW_VIDEOS_URL + "?page=" + page;
