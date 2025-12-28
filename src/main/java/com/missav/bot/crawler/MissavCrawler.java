@@ -308,7 +308,7 @@ public class MissavCrawler {
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
             wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("div.group")));
 
-            Thread.sleep(2000);
+            Thread.sleep(3000);
 
             log.info("提取渲染后的 HTML");
             String renderedHtml = driver.getPageSource();
@@ -318,10 +318,39 @@ public class MissavCrawler {
             Elements videoCards = doc.select("div.group");
             log.info("Selenium 提取到 {} 个视频卡片", videoCards.size());
 
+            if (!videoCards.isEmpty()) {
+                log.warn("========== 第一个视频卡片的 HTML（用于调试）==========");
+                log.warn(videoCards.first().html().substring(0, Math.min(1000, videoCards.first().html().length())));
+                log.warn("========== 第一个视频卡片的 HTML 结束 ==========");
+            }
+
             for (Element card : videoCards) {
                 try {
-                    Video video = parseVideoCard(card);
-                    if (video != null && video.getCode() != null) {
+                    Video video = new Video();
+
+                    Element link = card.selectFirst("a[href]");
+                    if (link != null) {
+                        String href = link.attr("href");
+                        if (href != null && !href.isEmpty() && !href.equals("#") && !href.equals("javascript:;")) {
+                            video.setDetailUrl(href.startsWith("http") ? href : BASE_URL + href);
+                            String code = extractCode(href);
+                            if (code == null) {
+                                code = extractCodeFromUrl(href);
+                            }
+                            video.setCode(code);
+                        }
+                    }
+
+                    Element img = card.selectFirst("img[src], img[data-src]");
+                    if (img != null) {
+                        String coverUrl = img.attr("src");
+                        if (coverUrl.isEmpty()) {
+                            coverUrl = img.attr("data-src");
+                        }
+                        video.setCoverUrl(coverUrl);
+                    }
+
+                    if (video.getCode() != null) {
                         videos.add(video);
                     }
                 } catch (Exception e) {
