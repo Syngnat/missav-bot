@@ -61,7 +61,7 @@ public class TelegramMessageService {
     /**
      * 格式化视频消息
      */
-    private String formatVideoMessage(Video video) {
+    public String formatVideoMessage(Video video) {
         StringBuilder sb = new StringBuilder();
         sb.append("🎬 *新片上架*\n\n");
         sb.append("📌 番号: `").append(escapeMarkdown(video.getCode())).append("`\n");
@@ -118,7 +118,7 @@ public class TelegramMessageService {
         return sb.toString().trim();
     }
 
-    private boolean sendVideoWithCaption(Long chatId, String videoUrl, String thumbUrl, String caption) {
+    public boolean sendVideoWithCaption(Long chatId, String videoUrl, String thumbUrl, String caption) {
         try {
             SendVideo sendVideo = new SendVideo();
             sendVideo.setChatId(chatId.toString());
@@ -136,7 +136,7 @@ public class TelegramMessageService {
         }
     }
 
-    private boolean sendPhotoWithCaption(Long chatId, String photoUrl, String caption) {
+    public boolean sendPhotoWithCaption(Long chatId, String photoUrl, String caption) {
         // 验证 URL 是否有效
         if (photoUrl == null || photoUrl.trim().isEmpty()) {
             log.warn("图片 URL 为空，直接发送纯文本");
@@ -166,7 +166,7 @@ public class TelegramMessageService {
         }
     }
 
-    private void sendMarkdown(Long chatId, String text) {
+    public void sendMarkdown(Long chatId, String text) {
         try {
             SendMessage message = new SendMessage();
             message.setChatId(chatId.toString());

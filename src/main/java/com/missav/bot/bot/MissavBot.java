@@ -186,7 +186,7 @@ public class MissavBot extends TelegramLongPollingBot {
 
             💡 有新视频时会自动推送到本群
             """;
-        sendMarkdown(chatId, help);
+        telegramMessageService.sendMarkdown(chatId, help);
     }
 
     /**
@@ -244,7 +244,7 @@ public class MissavBot extends TelegramLongPollingBot {
                 case TAG -> sb.append("• 标签: #").append(sub.getKeyword()).append("\n");
             }
         }
-        sendMarkdown(chatId, sb.toString());
+        telegramMessageService.sendMarkdown(chatId, sb.toString());
     }
 
     /**
@@ -278,7 +278,7 @@ public class MissavBot extends TelegramLongPollingBot {
         if (videos.size() > 10) {
             sb.append("\n...共 ").append(videos.size()).append(" 个结果");
         }
-        sendMarkdown(chatId, sb.toString());
+        telegramMessageService.sendMarkdown(chatId, sb.toString());
     }
 
     /**
@@ -317,12 +317,12 @@ public class MissavBot extends TelegramLongPollingBot {
             Video video = videos.get(i);
 
             // 为每个视频发送带封面的消息
-            String caption = formatVideoMessage(video);
+            String caption = telegramMessageService.formatVideoMessage(video);
 
             if (video.getCoverUrl() != null && !video.getCoverUrl().isEmpty()) {
-                sendPhotoWithCaption(chatId, video.getCoverUrl(), caption);
+                telegramMessageService.sendPhotoWithCaption(chatId, video.getCoverUrl(), caption);
             } else {
-                sendMarkdown(chatId, caption);
+                telegramMessageService.sendMarkdown(chatId, caption);
             }
 
             // 避免发送过快
@@ -352,7 +352,7 @@ public class MissavBot extends TelegramLongPollingBot {
             ⏰ 检查间隔: 15 分钟
             ✅ 运行正常
             """, videoCount);
-        sendMarkdown(chatId, status);
+        telegramMessageService.sendMarkdown(chatId, status);
     }
 
     /**
@@ -564,20 +564,20 @@ public class MissavBot extends TelegramLongPollingBot {
      */
     public boolean pushVideo(Long chatId, Video video) {
         try {
-            String caption = formatVideoMessage(video);
+            String caption = telegramMessageService.formatVideoMessage(video);
 
             // 优先发送预览视频
             if (video.getPreviewUrl() != null && !video.getPreviewUrl().isEmpty()) {
-                return sendVideoWithCaption(chatId, video.getPreviewUrl(), video.getCoverUrl(), caption);
+                return telegramMessageService.sendVideoWithCaption(chatId, video.getPreviewUrl(), video.getCoverUrl(), caption);
             }
 
             // 其次发送封面图
             if (video.getCoverUrl() != null && !video.getCoverUrl().isEmpty()) {
-                return sendPhotoWithCaption(chatId, video.getCoverUrl(), caption);
+                return telegramMessageService.sendPhotoWithCaption(chatId, video.getCoverUrl(), caption);
             }
 
             // 最后发送纯文本
-            sendMarkdown(chatId, caption);
+            telegramMessageService.sendMarkdown(chatId, caption);
             return true;
         } catch (Exception e) {
             log.error("推送视频失败: chatId={}, code={}", chatId, video.getCode(), e);
@@ -585,118 +585,12 @@ public class MissavBot extends TelegramLongPollingBot {
         }
     }
 
-    /**
-     * 格式化视频消息
-     */
-    private String formatVideoMessage(Video video) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("🎬 *新片上架*\n\n");
-        sb.append("📌 番号: `").append(escapeMarkdown(video.getCode())).append("`\n");
-
-        if (video.getActresses() != null && !video.getActresses().isEmpty()) {
-            sb.append("👩 演员: ").append(escapeMarkdown(video.getActresses())).append("\n");
-        }
-
-        if (video.getTags() != null && !video.getTags().isEmpty()) {
-            sb.append("🏷️ 标签: ").append(formatTags(video.getTags())).append("\n");
-        }
-
-        if (video.getDuration() != null) {
-            sb.append("⏱️ 时长: ").append(video.getDuration()).append(" 分钟\n");
-        }
-
-        sb.append("\n🔗 ").append(escapeMarkdown(video.getDetailUrl()));
-
-        return sb.toString();
-    }
-
-    /**
-     * 转义 Markdown 特殊字符
-     */
-    private String escapeMarkdown(String text) {
-        if (text == null) return "";
-        // Telegram Markdown 需要转义的特殊字符: _ * [ ] ( ) ~ ` > # + - = | { } . !
-        return text.replace("_", "\\_")
-                   .replace("*", "\\*")
-                   .replace("[", "\\[")
-                   .replace("]", "\\]")
-                   .replace("(", "\\(")
-                   .replace(")", "\\)")
-                   .replace("~", "\\~")
-                   .replace("`", "\\`")
-                   .replace(">", "\\>")
-                   .replace("#", "\\#")
-                   .replace("+", "\\+")
-                   .replace("-", "\\-")
-                   .replace("=", "\\=")
-                   .replace("|", "\\|")
-                   .replace("{", "\\{")
-                   .replace("}", "\\}")
-                   .replace(".", "\\.")
-                   .replace("!", "\\!");
-    }
-
-    private String formatTags(String tags) {
-        if (tags == null) return "";
-        String[] tagArr = tags.split(",\\s*");
-        StringBuilder sb = new StringBuilder();
-        for (String tag : tagArr) {
-            sb.append("#").append(tag.trim()).append(" ");
-        }
-        return sb.toString().trim();
-    }
-
-    private boolean sendVideoWithCaption(Long chatId, String videoUrl, String thumbUrl, String caption) {
-        try {
-            SendVideo sendVideo = new SendVideo();
-            sendVideo.setChatId(chatId.toString());
-            sendVideo.setVideo(new InputFile(videoUrl));
-            if (thumbUrl != null && !thumbUrl.isEmpty()) {
-                sendVideo.setThumbnail(new InputFile(thumbUrl));
-            }
-            sendVideo.setCaption(caption);
-            sendVideo.setParseMode("Markdown");
-            execute(sendVideo);
-            return true;
-        } catch (TelegramApiException e) {
-            log.warn("发送视频失败，尝试发送图片: {}", e.getMessage());
-            return sendPhotoWithCaption(chatId, thumbUrl, caption);
-        }
-    }
-
-    private boolean sendPhotoWithCaption(Long chatId, String photoUrl, String caption) {
-        try {
-            SendPhoto sendPhoto = new SendPhoto();
-            sendPhoto.setChatId(chatId.toString());
-            sendPhoto.setPhoto(new InputFile(photoUrl));
-            sendPhoto.setCaption(caption);
-            sendPhoto.setParseMode("Markdown");
-            execute(sendPhoto);
-            return true;
-        } catch (TelegramApiException e) {
-            log.warn("发送图片失败，发送纯文本: {}", e.getMessage());
-            sendMarkdown(chatId, caption);
-            return true;
-        }
-    }
 
     private void sendText(Long chatId, String text) {
         try {
             SendMessage message = new SendMessage();
             message.setChatId(chatId.toString());
             message.setText(text);
-            execute(message);
-        } catch (TelegramApiException e) {
-            log.error("发送消息失败", e);
-        }
-    }
-
-    private void sendMarkdown(Long chatId, String text) {
-        try {
-            SendMessage message = new SendMessage();
-            message.setChatId(chatId.toString());
-            message.setText(text);
-            message.setParseMode("Markdown");
             execute(message);
         } catch (TelegramApiException e) {
             log.error("发送消息失败", e);
