@@ -156,12 +156,48 @@ public class MissavCrawler {
             log.info("正在抓取视频详情: {}", detailUrl);
             String html = fetchHtml(detailUrl);
             if (html == null) {
-                return null;
+                log.warn("HTTP 请求失败，降级使用 Selenium");
+                return crawlVideoDetailWithSelenium(detailUrl);
             }
             return parseVideoDetail(html, detailUrl);
         } catch (Exception e) {
             log.error("抓取视频详情失败: {}", detailUrl, e);
             return null;
+        }
+    }
+
+    /**
+     * 使用 Selenium 抓取视频详情
+     */
+    private Video crawlVideoDetailWithSelenium(String url) {
+        WebDriver driver = null;
+        try {
+            WebDriverManager.chromedriver().setup();
+
+            ChromeOptions options = new ChromeOptions();
+            options.addArguments("--headless=new");
+            options.addArguments("--no-sandbox");
+            options.addArguments("--disable-dev-shm-usage");
+            options.addArguments("--disable-gpu");
+            options.addArguments("--user-agent=" + userAgent);
+
+            driver = new ChromeDriver(options);
+            driver.get(url);
+
+            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+            wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
+            Thread.sleep(2000);
+
+            String renderedHtml = driver.getPageSource();
+            return parseVideoDetail(renderedHtml, url);
+
+        } catch (Exception e) {
+            log.error("Selenium 抓取视频详情失败: {}", url, e);
+            return null;
+        } finally {
+            if (driver != null) {
+                driver.quit();
+            }
         }
     }
 
