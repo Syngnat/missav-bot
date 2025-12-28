@@ -1,12 +1,20 @@
 package com.missav.bot.crawler;
 
 import com.missav.bot.video.entity.Video;
+import io.github.bonigarcia.wdm.WebDriverManager;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -207,7 +215,6 @@ public class MissavCrawler {
         List<Video> videos = new ArrayList<>();
         Document doc = Jsoup.parse(html);
 
-        // 输出页面基本信息用于调试
         log.info("页面标题: {}", doc.title());
 
         // 首先尝试从 script 标签中提取 JSON 数据（处理客户端渲染）
@@ -231,22 +238,18 @@ public class MissavCrawler {
         log.info("选择器1匹配到 {} 个元素", videoCards.size());
 
         if (videoCards.isEmpty()) {
-            // 尝试更通用的选择器
             videoCards = doc.select("div.group");
             log.info("选择器2(div.group)匹配到 {} 个元素", videoCards.size());
         }
 
         if (videoCards.isEmpty()) {
-            // 尝试查找所有包含视频链接的元素
             videoCards = doc.select("a[href*='/']");
             log.info("选择器3(a[href])匹配到 {} 个元素", videoCards.size());
 
-            // 如果找到了链接，过滤出可能是视频的链接
             if (!videoCards.isEmpty()) {
                 videoCards = videoCards.stream()
                     .filter(e -> {
                         String href = e.attr("href");
-                        // 过滤出包含番号模式的链接
                         return href != null && CODE_PATTERN.matcher(href).find();
                     })
                     .collect(Elements::new, Elements::add, Elements::addAll);
@@ -256,7 +259,6 @@ public class MissavCrawler {
 
         log.info("最终使用的选择器匹配到 {} 个视频卡片", videoCards.size());
 
-        // 如果还是没找到，输出HTML片段用于调试
         if (videoCards.isEmpty()) {
             log.warn("未找到任何视频卡片，输出HTML前1000字符用于调试:");
             log.warn(html.substring(0, Math.min(1000, html.length())));
@@ -268,7 +270,6 @@ public class MissavCrawler {
                 if (video != null && video.getCode() != null) {
                     videos.add(video);
                 } else {
-                    // 输出解析失败的元素信息用于调试
                     log.warn("解析视频卡片失败，未提取到番号。元素HTML: {}",
                         card.html().substring(0, Math.min(500, card.html().length())));
                     if (video != null) {
@@ -282,6 +283,64 @@ public class MissavCrawler {
         }
 
         return videos;
+    }
+
+    /**
+     * 使用 Selenium 提取客户端渲染的视频列表
+     */
+    private List<Video> extractVideosWithSelenium(String url) {
+        log.warn("========== 启动无头浏览器提取视频数据 ==========");
+        WebDriver driver = null;
+        try {
+            WebDriverManager.chromedriver().setup();
+
+            ChromeOptions options = new ChromeOptions();
+            options.addArguments("--headless=new");
+            options.addArguments("--no-sandbox");
+            options.addArguments("--disable-dev-shm-usage");
+            options.addArguments("--disable-gpu");
+            options.addArguments("--user-agent=" + userAgent);
+
+            driver = new ChromeDriver(options);
+            driver.get(url);
+
+            log.info("等待页面加载完成...");
+            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+            wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("div.group")));
+
+            Thread.sleep(2000);
+
+            log.info("提取渲染后的 HTML");
+            String renderedHtml = driver.getPageSource();
+            Document doc = Jsoup.parse(renderedHtml);
+
+            List<Video> videos = new ArrayList<>();
+            Elements videoCards = doc.select("div.group");
+            log.info("Selenium 提取到 {} 个视频卡片", videoCards.size());
+
+            for (Element card : videoCards) {
+                try {
+                    Video video = parseVideoCard(card);
+                    if (video != null && video.getCode() != null) {
+                        videos.add(video);
+                    }
+                } catch (Exception e) {
+                    log.warn("解析视频卡片异常", e);
+                }
+            }
+
+            log.warn("✓ Selenium 提取完成，获得 {} 个视频", videos.size());
+            return videos;
+
+        } catch (Exception e) {
+            log.error("Selenium 提取失败", e);
+            return new ArrayList<>();
+        } finally {
+            if (driver != null) {
+                driver.quit();
+            }
+            log.warn("========== 无头浏览器已关闭 ==========");
+        }
     }
 
     /**
@@ -510,7 +569,6 @@ public class MissavCrawler {
     public List<Video> crawlByKeyword(String keyword, Integer limit) {
         List<Video> videos = new ArrayList<>();
         int page = 1;
-        // 假设每页平均 12 个视频，计算需要的最大页数（向上取整并多爬1页以确保足够）
         int maxPages = limit != null ? ((limit + 11) / 12 + 1) : Integer.MAX_VALUE;
 
         try {
@@ -526,6 +584,13 @@ public class MissavCrawler {
                 }
 
                 List<Video> pageVideos = parseVideoList(html);
+
+                // 如果第一页解析失败，尝试使用 Selenium
+                if (pageVideos.isEmpty() && page == 1) {
+                    log.warn("第一页 HTML 解析失败，尝试使用 Selenium 无头浏览器");
+                    pageVideos = extractVideosWithSelenium(url);
+                }
+
                 if (pageVideos.isEmpty()) {
                     break;
                 }
