@@ -110,7 +110,9 @@ public class MissavBot extends TelegramLongPollingBot {
         log.info("收到消息: chatId={}, type={}, text={}", chatId, chatType, text);
 
         // 自动为新群组创建订阅（仅群组/超级群组，不包括私聊）
-        if (("group".equals(chatType) || "supergroup".equals(chatType)) && text.startsWith("/")) {
+        // 跳过 /subscribe 命令，避免与手动订阅冲突
+        if (("group".equals(chatType) || "supergroup".equals(chatType)) &&
+            text.startsWith("/") && !text.toLowerCase().startsWith("/subscribe")) {
             try {
                 List<Subscription> existingSubs = subscriptionService.getSubscriptions(chatId);
                 if (existingSubs.isEmpty()) {
