@@ -211,14 +211,15 @@ public class MissavCrawler {
         log.info("页面标题: {}", doc.title());
 
         // 首先尝试从 script 标签中提取 JSON 数据（处理客户端渲染）
+        log.info("开始尝试 JSON 提取...");
         List<Video> jsonVideos = extractVideosFromJson(doc);
         if (!jsonVideos.isEmpty()) {
-            log.info("从 JSON 数据中提取到 {} 个视频", jsonVideos.size());
+            log.info("✓ JSON 提取成功，获得 {} 个视频", jsonVideos.size());
             return jsonVideos;
         }
 
         // 降级方案：使用传统 HTML 解析
-        log.debug("JSON 提取失败，尝试 HTML 解析");
+        log.info("✗ JSON 提取失败（返回 0 个视频），降级到 HTML 解析");
         log.info("页面包含的主要 div 类: {}", doc.select("div[class]").stream()
             .limit(10)
             .map(e -> e.className())
@@ -602,13 +603,15 @@ public class MissavCrawler {
 
         // 查找所有 script 标签
         Elements scripts = doc.select("script");
+        log.info("找到 {} 个 script 标签", scripts.size());
+
         for (Element script : scripts) {
             String scriptContent = script.html();
 
             // 查找可能包含视频数据的 JSON
             // 常见模式: window.__INITIAL_STATE__, window.DATA, 或直接的 JSON 数组
             if (scriptContent.contains("dvd_id") || scriptContent.contains("uuid")) {
-                log.debug("发现可能包含视频数据的 script 标签");
+                log.info("发现可能包含视频数据的 script 标签（长度: {} 字符）", scriptContent.length());
 
                 try {
                     // 尝试提取 JSON 数据
@@ -619,19 +622,22 @@ public class MissavCrawler {
 
                     if (m1.find()) {
                         String jsonStr = m1.group(1);
-                        log.debug("提取到 JSON 字符串（前200字符）: {}",
+                        log.info("提取到 JSON 字符串（前200字符）: {}",
                             jsonStr.substring(0, Math.min(200, jsonStr.length())));
 
                         // TODO: 使用 JSON 解析库（如 Jackson 或 Gson）解析数据
                         // 这里先简单提取 dvd_id
                         videos.addAll(parseJsonToVideos(jsonStr));
+                    } else {
+                        log.info("未匹配到 window.xxx = {{...}} 模式");
                     }
                 } catch (Exception e) {
-                    log.debug("JSON 提取失败", e);
+                    log.warn("JSON 提取失败", e);
                 }
             }
         }
 
+        log.info("JSON 提取完成，共获得 {} 个视频", videos.size());
         return videos;
     }
 
