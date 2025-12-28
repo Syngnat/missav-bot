@@ -238,14 +238,15 @@ public class MissavBot extends TelegramLongPollingBot {
             return;
         }
 
-        StringBuilder sb = new StringBuilder("📋 *我的订阅*\n\n");
+        StringBuilder sb = new StringBuilder("📋 *当前订阅列表* (共 " + subscriptions.size() + " 个)\n\n");
         for (Subscription sub : subscriptions) {
             switch (sub.getType()) {
-                case ALL -> sb.append("• 全部新片\n");
+                case ALL -> sb.append("• 全部新片 (所有视频都会推送)\n");
                 case ACTRESS -> sb.append("• 演员: ").append(sub.getKeyword()).append("\n");
                 case TAG -> sb.append("• 标签: #").append(sub.getKeyword()).append("\n");
             }
         }
+        sb.append("\n💡 使用 /unsubscribe 取消订阅");
         telegramMessageService.sendMarkdown(chatId, sb.toString());
     }
 
