@@ -606,23 +606,38 @@ public class MissavCrawler {
         log.info("找到 {} 个 script 标签", scripts.size());
 
         int scriptIndex = 0;
+        Element obfuscatedScript = null;
+        int obfuscatedScriptIndex = -1;
+
         for (Element script : scripts) {
             String scriptContent = script.html();
             scriptIndex++;
 
-            // 输出每个 script 的前 200 字符用于分析
+            // 检测混淆代码（eval + function packing）
+            boolean isObfuscated = scriptContent.contains("eval(function(p,a,c,k,e,d)");
+            boolean hasVideoData = scriptContent.contains("dvd_id") || scriptContent.contains("uuid");
+
+            // 输出 script 信息
             if (scriptContent.length() > 0) {
-                log.info("Script #{} (长度: {} 字符) 前200字符: {}",
+                String prefix = isObfuscated ? "【混淆代码】" : "";
+                log.info("{}Script #{} (长度: {} 字符) 前200字符: {}",
+                    prefix,
                     scriptIndex,
                     scriptContent.length(),
                     scriptContent.substring(0, Math.min(200, scriptContent.length())));
+
+                // 如果是混淆代码且长度超过3000字符，保存引用（可能包含视频数据）
+                if (isObfuscated && scriptContent.length() > 3000) {
+                    obfuscatedScript = script;
+                    obfuscatedScriptIndex = scriptIndex;
+                    log.warn("检测到大型混淆代码 Script #{}，稍后输出完整内容", scriptIndex);
+                }
             } else {
                 log.info("Script #{} 为空", scriptIndex);
             }
 
             // 查找可能包含视频数据的 JSON
-            // 常见模式: window.__INITIAL_STATE__, window.DATA, 或直接的 JSON 数组
-            if (scriptContent.contains("dvd_id") || scriptContent.contains("uuid")) {
+            if (hasVideoData) {
                 log.info("发现可能包含视频数据的 script 标签（长度: {} 字符）", scriptContent.length());
 
                 try {
@@ -649,8 +664,74 @@ public class MissavCrawler {
             }
         }
 
+        // 如果发现混淆代码，输出完整内容用于分析
+        if (obfuscatedScript != null) {
+            String fullContent = obfuscatedScript.html();
+            log.warn("========== 混淆代码 Script #{} 完整内容开始 ==========", obfuscatedScriptIndex);
+            log.warn(fullContent);
+            log.warn("========== 混淆代码 Script #{} 完整内容结束 ==========", obfuscatedScriptIndex);
+
+            // 尝试分析混淆代码的特征
+            analyzeObfuscatedCode(fullContent, obfuscatedScriptIndex);
+        }
+
         log.info("JSON 提取完成，共获得 {} 个视频", videos.size());
         return videos;
+    }
+
+    /**
+     * 分析混淆代码，尝试找到视频数据的加载方式
+     */
+    private void analyzeObfuscatedCode(String code, int scriptIndex) {
+        log.info("========== 开始分析混淆代码 Script #{} ==========", scriptIndex);
+
+        // 检测是否包含 fetch/axios/ajax 等网络请求
+        if (code.contains("fetch(") || code.contains("axios") || code.contains("$.ajax") || code.contains("XMLHttpRequest")) {
+            log.warn("✓ 检测到网络请求相关代码（fetch/axios/ajax/XMLHttpRequest）");
+
+            // 尝试提取 API URL 模式
+            Pattern urlPattern = Pattern.compile("(['\"])(https?://[^'\"]+|/api/[^'\"]+)\\1");
+            Matcher matcher = urlPattern.matcher(code);
+            Set<String> urls = new HashSet<>();
+            while (matcher.find()) {
+                String url = matcher.group(2);
+                if (url.contains("api") || url.contains("search") || url.contains("video")) {
+                    urls.add(url);
+                }
+            }
+            if (!urls.isEmpty()) {
+                log.warn("✓ 发现可能的 API 端点:");
+                urls.forEach(url -> log.warn("  - {}", url));
+            }
+        }
+
+        // 检测 Alpine.js 或 Vue.js 相关代码
+        if (code.contains("Alpine") || code.contains("x-data") || code.contains("Vue")) {
+            log.warn("✓ 检测到 Alpine.js/Vue.js 框架代码");
+        }
+
+        // 检测数据挂载到 window 对象
+        Pattern windowPattern = Pattern.compile("window\\.([\\w_]+)\\s*=");
+        Matcher windowMatcher = windowPattern.matcher(code);
+        Set<String> windowVars = new HashSet<>();
+        while (windowMatcher.find()) {
+            windowVars.add(windowMatcher.group(1));
+        }
+        if (!windowVars.isEmpty()) {
+            log.warn("✓ 发现挂载到 window 的变量:");
+            windowVars.forEach(var -> log.warn("  - window.{}", var));
+        }
+
+        // 检测解混淆后的函数调用特征
+        if (code.contains("eval(function(p,a,c,k,e,d)")) {
+            log.warn("✓ 确认为 eval 函数打包混淆");
+            log.warn("  建议方案:");
+            log.warn("  1. 在浏览器控制台执行此代码并拦截网络请求，找到真实 API");
+            log.warn("  2. 使用无头浏览器（Selenium/Playwright）执行 JavaScript 并提取渲染后的 DOM");
+            log.warn("  3. 反向分析混淆代码，提取关键变量和函数");
+        }
+
+        log.info("========== 混淆代码分析完成 ==========");
     }
 
     /**
