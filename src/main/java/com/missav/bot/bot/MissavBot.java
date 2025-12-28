@@ -496,6 +496,23 @@ public class MissavBot extends TelegramLongPollingBot {
      * 按关键词搜索爬取
      */
     private void handleCrawlBySearch(Long chatId, String chatType, String[] parts) {
+        // 临时禁用：搜索页面使用客户端渲染，无法通过 Jsoup 解析
+        sendText(chatId, """
+            ⚠️ 关键词搜索功能暂时不可用
+
+            原因：MissAV 搜索页面使用客户端渲染（JavaScript动态加载），
+            当前爬虫无法解析此类页面。
+
+            替代方案：
+            • 使用 /crawl actor 演员名 [数量] - 按演员爬取
+            • 使用 /crawl code 番号 - 按番号爬取
+            • 订阅演员或标签后自动接收新片
+
+            未来将通过 API 或无头浏览器解决此问题。
+            """);
+        return;
+
+        /*
         // 安全检查：仅允许私聊使用
         if (!"private".equals(chatType)) {
             sendText(chatId, "⚠️ 为保护隐私安全，关键词搜索功能仅支持私聊使用");
@@ -557,6 +574,7 @@ public class MissavBot extends TelegramLongPollingBot {
                 sendText(chatId, "❌ 爬取失败：" + e.getMessage());
             }
         }).start();
+        */
     }
 
     /**
