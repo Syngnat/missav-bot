@@ -408,7 +408,8 @@ public class MissavCrawler {
     public List<Video> crawlByActor(String actorName, Integer limit) {
         List<Video> videos = new ArrayList<>();
         int page = 1;
-        int maxPages = limit != null ? (limit / 30 + 1) : Integer.MAX_VALUE;
+        // 假设每页平均 12 个视频，计算需要的最大页数（向上取整并多爬1页以确保足够）
+        int maxPages = limit != null ? ((limit + 11) / 12 + 1) : Integer.MAX_VALUE;
 
         try {
             initCookies();
@@ -428,10 +429,11 @@ public class MissavCrawler {
                 }
 
                 videos.addAll(pageVideos);
-                log.info("演员 {} 第{}页抓取到{}个视频", actorName, page, pageVideos.size());
+                log.info("演员 {} 第{}页抓取到{}个视频，当前总数: {}", actorName, page, pageVideos.size(), videos.size());
 
                 if (limit != null && videos.size() >= limit) {
                     videos = videos.subList(0, limit);
+                    log.info("已达到限制数量 {}，停止抓取", limit);
                     break;
                 }
 
@@ -442,6 +444,7 @@ public class MissavCrawler {
             log.error("抓取演员 {} 的作品失败", actorName, e);
         }
 
+        log.info("演员作品抓取完成，共抓取 {} 个视频", videos.size());
         return videos;
     }
 
@@ -477,7 +480,8 @@ public class MissavCrawler {
     public List<Video> crawlByKeyword(String keyword, Integer limit) {
         List<Video> videos = new ArrayList<>();
         int page = 1;
-        int maxPages = limit != null ? (limit / 30 + 1) : Integer.MAX_VALUE;
+        // 假设每页平均 12 个视频，计算需要的最大页数（向上取整并多爬1页以确保足够）
+        int maxPages = limit != null ? ((limit + 11) / 12 + 1) : Integer.MAX_VALUE;
 
         try {
             initCookies();
@@ -497,10 +501,11 @@ public class MissavCrawler {
                 }
 
                 videos.addAll(pageVideos);
-                log.info("关键词 {} 第{}页抓取到{}个视频", keyword, page, pageVideos.size());
+                log.info("关键词 {} 第{}页抓取到{}个视频，当前总数: {}", keyword, page, pageVideos.size(), videos.size());
 
                 if (limit != null && videos.size() >= limit) {
                     videos = videos.subList(0, limit);
+                    log.info("已达到限制数量 {}，停止抓取", limit);
                     break;
                 }
 
@@ -511,6 +516,7 @@ public class MissavCrawler {
             log.error("搜索关键词 {} 失败", keyword, e);
         }
 
+        log.info("关键词搜索完成，共抓取 {} 个视频", videos.size());
         return videos;
     }
 

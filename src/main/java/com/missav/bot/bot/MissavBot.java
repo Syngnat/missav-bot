@@ -559,10 +559,10 @@ public class MissavBot extends TelegramLongPollingBot {
     private String formatVideoMessage(Video video) {
         StringBuilder sb = new StringBuilder();
         sb.append("🎬 *新片上架*\n\n");
-        sb.append("📌 番号: `").append(video.getCode()).append("`\n");
+        sb.append("📌 番号: `").append(escapeMarkdown(video.getCode())).append("`\n");
 
         if (video.getActresses() != null && !video.getActresses().isEmpty()) {
-            sb.append("👩 演员: ").append(video.getActresses()).append("\n");
+            sb.append("👩 演员: ").append(escapeMarkdown(video.getActresses())).append("\n");
         }
 
         if (video.getTags() != null && !video.getTags().isEmpty()) {
@@ -576,6 +576,32 @@ public class MissavBot extends TelegramLongPollingBot {
         sb.append("\n🔗 ").append(video.getDetailUrl());
 
         return sb.toString();
+    }
+
+    /**
+     * 转义 Markdown 特殊字符
+     */
+    private String escapeMarkdown(String text) {
+        if (text == null) return "";
+        // Telegram Markdown 需要转义的特殊字符: _ * [ ] ( ) ~ ` > # + - = | { } . !
+        return text.replace("_", "\\_")
+                   .replace("*", "\\*")
+                   .replace("[", "\\[")
+                   .replace("]", "\\]")
+                   .replace("(", "\\(")
+                   .replace(")", "\\)")
+                   .replace("~", "\\~")
+                   .replace("`", "\\`")
+                   .replace(">", "\\>")
+                   .replace("#", "\\#")
+                   .replace("+", "\\+")
+                   .replace("-", "\\-")
+                   .replace("=", "\\=")
+                   .replace("|", "\\|")
+                   .replace("{", "\\{")
+                   .replace("}", "\\}")
+                   .replace(".", "\\.")
+                   .replace("!", "\\!");
     }
 
     private String formatTags(String tags) {
