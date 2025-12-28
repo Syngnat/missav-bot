@@ -38,7 +38,7 @@ public class PushServiceImpl implements IPushService {
             if (pushedChatIds.contains(sub.getChatId())) {
                 continue;
             }
-            pushToChat(video, sub.getChatId());
+            pushToChatInternal(video, sub.getChatId());
             pushedChatIds.add(sub.getChatId());
         }
 
@@ -50,7 +50,7 @@ public class PushServiceImpl implements IPushService {
                     if (pushedChatIds.contains(sub.getChatId())) {
                         continue;
                     }
-                    pushToChat(video, sub.getChatId());
+                    pushToChatInternal(video, sub.getChatId());
                     pushedChatIds.add(sub.getChatId());
                 }
             }
@@ -64,7 +64,7 @@ public class PushServiceImpl implements IPushService {
                     if (pushedChatIds.contains(sub.getChatId())) {
                         continue;
                     }
-                    pushToChat(video, sub.getChatId());
+                    pushToChatInternal(video, sub.getChatId());
                     pushedChatIds.add(sub.getChatId());
                 }
             }
@@ -80,7 +80,7 @@ public class PushServiceImpl implements IPushService {
         }
     }
 
-    private void pushToChat(Video video, Long chatId) {
+    private void pushToChatInternal(Video video, Long chatId) {
         if (pushRecordMapper.existsByVideoIdAndChatIdAndStatus(
                 video.getId(), chatId, PushRecord.PushStatus.SUCCESS.name())) {
             log.debug("视频已推送过: videoId={}, chatId={}", video.getId(), chatId);
@@ -109,6 +109,11 @@ public class PushServiceImpl implements IPushService {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    @Override
+    public void pushVideoToChat(Video video, Long chatId) {
+        pushToChatInternal(video, chatId);
     }
 
     @Override

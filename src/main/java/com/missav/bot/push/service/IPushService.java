@@ -17,4 +17,11 @@ public interface IPushService {
      * 推送所有未推送的视频
      */
     void pushUnpushedVideos();
+
+    /**
+     * 推送视频给指定用户（会记录到 push_records 表，避免重复推送）
+     * @param video 视频
+     * @param chatId 聊天ID
+     */
+    void pushVideoToChat(Video video, Long chatId);
 }

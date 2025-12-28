@@ -1,6 +1,7 @@
 package com.missav.bot.bot;
 
 import com.missav.bot.crawler.CrawlResult;
+import com.missav.bot.push.service.IPushService;
 import com.missav.bot.subscription.entity.Subscription;
 import com.missav.bot.subscription.entity.Subscription.SubscriptionType;
 import com.missav.bot.video.entity.Video;
@@ -34,6 +35,7 @@ public class MissavBot extends TelegramLongPollingBot {
     private final ISubscriptionService subscriptionService;
     private final VideoMapper videoMapper;
     private final ICrawlerService crawlerService;
+    private final IPushService pushService;
 
     @Value("${telegram.bot.token}")
     private String botToken;
@@ -41,11 +43,13 @@ public class MissavBot extends TelegramLongPollingBot {
     @Value("${telegram.bot.username:MissavBot}")
     private String botUsername;
 
-    public MissavBot(ISubscriptionService subscriptionService, VideoMapper videoMapper, ICrawlerService crawlerService) {
+    public MissavBot(ISubscriptionService subscriptionService, VideoMapper videoMapper,
+                     ICrawlerService crawlerService, IPushService pushService) {
         super(createBotOptions());
         this.subscriptionService = subscriptionService;
         this.videoMapper = videoMapper;
         this.crawlerService = crawlerService;
+        this.pushService = pushService;
     }
 
     private static DefaultBotOptions createBotOptions() {
@@ -437,7 +441,7 @@ public class MissavBot extends TelegramLongPollingBot {
 
                 // 推送每个新视频给触发者
                 for (Video video : result.getNewVideos()) {
-                    pushVideo(chatId, video);
+                    pushService.pushVideoToChat(video, chatId);
                     Thread.sleep(1000);
                 }
             } catch (Exception e) {
@@ -473,7 +477,7 @@ public class MissavBot extends TelegramLongPollingBot {
                 }
 
                 sendText(chatId, "✅ 爬取成功");
-                pushVideo(chatId, video);
+                pushService.pushVideoToChat(video, chatId);
             } catch (Exception e) {
                 log.error("爬取番号失败", e);
                 sendText(chatId, "❌ 爬取失败：" + e.getMessage());
@@ -538,7 +542,7 @@ public class MissavBot extends TelegramLongPollingBot {
 
                 // 推送每个新视频给触发者
                 for (Video video : result.getNewVideos()) {
-                    pushVideo(chatId, video);
+                    pushService.pushVideoToChat(video, chatId);
                     Thread.sleep(1000);
                 }
             } catch (Exception e) {
