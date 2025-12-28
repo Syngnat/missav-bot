@@ -137,16 +137,30 @@ public class TelegramMessageService {
     }
 
     private boolean sendPhotoWithCaption(Long chatId, String photoUrl, String caption) {
+        // 验证 URL 是否有效
+        if (photoUrl == null || photoUrl.trim().isEmpty()) {
+            log.warn("图片 URL 为空，直接发送纯文本");
+            sendMarkdown(chatId, caption);
+            return true;
+        }
+
+        // 验证 URL 格式
+        if (!photoUrl.startsWith("http://") && !photoUrl.startsWith("https://")) {
+            log.warn("图片 URL 格式无效: {}, 直接发送纯文本", photoUrl);
+            sendMarkdown(chatId, caption);
+            return true;
+        }
+
         try {
             SendPhoto sendPhoto = new SendPhoto();
             sendPhoto.setChatId(chatId.toString());
-            sendPhoto.setPhoto(new InputFile(photoUrl));
+            sendPhoto.setPhoto(new InputFile(photoUrl.trim()));
             sendPhoto.setCaption(caption);
             sendPhoto.setParseMode("Markdown");
             bot.execute(sendPhoto);
             return true;
         } catch (TelegramApiException e) {
-            log.warn("发送图片失败，发送纯文本: {}", e.getMessage());
+            log.warn("发送图片失败 (URL: {}): {}, 发送纯文本", photoUrl, e.getMessage());
             sendMarkdown(chatId, caption);
             return true;
         }

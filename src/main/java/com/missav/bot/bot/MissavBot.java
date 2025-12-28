@@ -605,7 +605,7 @@ public class MissavBot extends TelegramLongPollingBot {
             sb.append("⏱️ 时长: ").append(video.getDuration()).append(" 分钟\n");
         }
 
-        sb.append("\n🔗 ").append(video.getDetailUrl());
+        sb.append("\n🔗 ").append(escapeMarkdown(video.getDetailUrl()));
 
         return sb.toString();
     }
