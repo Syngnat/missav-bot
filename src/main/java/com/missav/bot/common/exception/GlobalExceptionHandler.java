@@ -48,6 +48,14 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 处理文件上传解析异常（降级为DEBUG，避免日志污染）
+     */
+    @ExceptionHandler(org.springframework.web.multipart.MultipartException.class)
+    public void handleMultipartException(org.springframework.web.multipart.MultipartException e) {
+        log.debug("文件上传解析失败（通常是 Telegram 发送的非文本消息）: {}", e.getMessage());
+    }
+
+    /**
      * 处理通用异常
      */
     @ExceptionHandler(Exception.class)
