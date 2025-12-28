@@ -96,10 +96,12 @@ public class CrawlerServiceImpl implements ICrawlerService {
 
         // 批量插入
         int actualInserted = 0;
+        List<Video> insertedVideos = new ArrayList<>();
         for (Video video : newVideos) {
             try {
                 videoMapper.insert(video);
                 log.info("新视频入库: {} - {}", video.getCode(), video.getTitle());
+                insertedVideos.add(video);
                 actualInserted++;
             } catch (org.springframework.dao.DuplicateKeyException e) {
                 log.warn("视频已存在，跳过: {}", video.getCode());
@@ -110,7 +112,7 @@ public class CrawlerServiceImpl implements ICrawlerService {
         log.info("本次抓取完成 - 总计: {}, 新增: {}, 重复: {}, 无效: {}",
             crawledVideos.size(), actualInserted, duplicateCount, invalidCount);
 
-        return newVideos;
+        return insertedVideos;
     }
 
     private void mergeVideoInfo(Video target, Video source) {
@@ -256,10 +258,12 @@ public class CrawlerServiceImpl implements ICrawlerService {
 
         // 批量插入
         int actualInserted = 0;
+        List<Video> insertedVideos = new ArrayList<>();
         for (Video video : newVideos) {
             try {
                 videoMapper.insert(video);
                 log.info("新视频入库: {} - {}", video.getCode(), video.getTitle());
+                insertedVideos.add(video);
                 actualInserted++;
             } catch (org.springframework.dao.DuplicateKeyException e) {
                 log.warn("视频已存在，跳过: {}", video.getCode());
@@ -270,6 +274,6 @@ public class CrawlerServiceImpl implements ICrawlerService {
         log.info("本次抓取完成 - 总计: {}, 新增: {}, 重复: {}, 无效: {}",
             crawledVideos.size(), actualInserted, duplicateCount, invalidCount);
 
-        return new CrawlResult(newVideos, crawledVideos.size(), duplicateCount, invalidCount);
+        return new CrawlResult(insertedVideos, crawledVideos.size(), duplicateCount, invalidCount);
     }
 }
