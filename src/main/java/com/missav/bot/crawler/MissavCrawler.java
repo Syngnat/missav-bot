@@ -209,6 +209,16 @@ public class MissavCrawler {
 
         // 输出页面基本信息用于调试
         log.info("页面标题: {}", doc.title());
+
+        // 首先尝试从 script 标签中提取 JSON 数据（处理客户端渲染）
+        List<Video> jsonVideos = extractVideosFromJson(doc);
+        if (!jsonVideos.isEmpty()) {
+            log.info("从 JSON 数据中提取到 {} 个视频", jsonVideos.size());
+            return jsonVideos;
+        }
+
+        // 降级方案：使用传统 HTML 解析
+        log.debug("JSON 提取失败，尝试 HTML 解析");
         log.info("页面包含的主要 div 类: {}", doc.select("div[class]").stream()
             .limit(10)
             .map(e -> e.className())
@@ -582,6 +592,84 @@ public class MissavCrawler {
             log.warn("从URL提取标识符失败: {}", url, e);
         }
         return null;
+    }
+
+    /**
+     * 从页面 script 标签中提取 JSON 数据（处理客户端渲染页面）
+     */
+    private List<Video> extractVideosFromJson(Document doc) {
+        List<Video> videos = new ArrayList<>();
+
+        // 查找所有 script 标签
+        Elements scripts = doc.select("script");
+        for (Element script : scripts) {
+            String scriptContent = script.html();
+
+            // 查找可能包含视频数据的 JSON
+            // 常见模式: window.__INITIAL_STATE__, window.DATA, 或直接的 JSON 数组
+            if (scriptContent.contains("dvd_id") || scriptContent.contains("uuid")) {
+                log.debug("发现可能包含视频数据的 script 标签");
+
+                try {
+                    // 尝试提取 JSON 数据
+                    // 模式1: window.xxx = {...}
+                    String jsonPattern1 = "window\\.[\\w_]+\\s*=\\s*(\\{.*?\\});?$";
+                    java.util.regex.Pattern p1 = java.util.regex.Pattern.compile(jsonPattern1, java.util.regex.Pattern.DOTALL);
+                    Matcher m1 = p1.matcher(scriptContent);
+
+                    if (m1.find()) {
+                        String jsonStr = m1.group(1);
+                        log.debug("提取到 JSON 字符串（前200字符）: {}",
+                            jsonStr.substring(0, Math.min(200, jsonStr.length())));
+
+                        // TODO: 使用 JSON 解析库（如 Jackson 或 Gson）解析数据
+                        // 这里先简单提取 dvd_id
+                        videos.addAll(parseJsonToVideos(jsonStr));
+                    }
+                } catch (Exception e) {
+                    log.debug("JSON 提取失败", e);
+                }
+            }
+        }
+
+        return videos;
+    }
+
+    /**
+     * 解析 JSON 字符串为视频列表（简化版）
+     */
+    private List<Video> parseJsonToVideos(String jsonStr) {
+        List<Video> videos = new ArrayList<>();
+
+        // 简单的正则提取（临时方案）
+        // 更好的做法是使用 Jackson/Gson，但需要先分析具体的 JSON 结构
+        Pattern dvdIdPattern = Pattern.compile("\"dvd_id\"\\s*:\\s*\"([^\"]+)\"");
+        Pattern uuidPattern = Pattern.compile("\"uuid\"\\s*:\\s*\"([^\"]+)\"");
+
+        Matcher matcher = dvdIdPattern.matcher(jsonStr);
+        while (matcher.find()) {
+            String dvdId = matcher.group(1);
+            Video video = new Video();
+            video.setCode(dvdId.toUpperCase());
+            video.setDetailUrl(BASE_URL + "/" + dvdId);
+            videos.add(video);
+            log.debug("从 JSON 提取到视频: {}", dvdId);
+        }
+
+        // 如果没有 dvd_id，尝试 uuid
+        if (videos.isEmpty()) {
+            matcher = uuidPattern.matcher(jsonStr);
+            while (matcher.find()) {
+                String uuid = matcher.group(1);
+                Video video = new Video();
+                video.setCode(uuid.toUpperCase());
+                video.setDetailUrl(BASE_URL + "/" + uuid);
+                videos.add(video);
+                log.debug("从 JSON 提取到视频（UUID）: {}", uuid);
+            }
+        }
+
+        return videos;
     }
 
     /**
