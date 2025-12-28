@@ -31,14 +31,21 @@ public class CrawlerServiceImpl implements ICrawlerService {
     public List<Video> crawlAndSaveNewVideos(int pages) {
         List<Video> crawledVideos = crawler.crawlNewVideos(pages);
         List<Video> newVideos = new ArrayList<>();
+        int duplicateCount = 0;  // 重复视频计数
+        int invalidCount = 0;    // 无效视频计数（无番号）
+
+        log.info("开始处理爬取到的 {} 个视频", crawledVideos.size());
 
         for (Video video : crawledVideos) {
             if (video.getCode() == null) {
+                invalidCount++;
+                log.debug("跳过无效视频（无番号）: {}", video.getTitle());
                 continue;
             }
 
             if (videoMapper.existsByCode(video.getCode())) {
-                log.debug("视频已存在: {}", video.getCode());
+                duplicateCount++;
+                log.debug("视频已存在，跳过: {}", video.getCode());
                 continue;
             }
 
@@ -62,7 +69,10 @@ public class CrawlerServiceImpl implements ICrawlerService {
             log.info("新视频入库: {} - {}", video.getCode(), video.getTitle());
         }
 
-        log.info("本次抓取完成，新增{}个视频", newVideos.size());
+        // 输出汇总日志
+        log.info("本次抓取完成 - 总计: {}, 新增: {}, 重复: {}, 无效: {}",
+            crawledVideos.size(), newVideos.size(), duplicateCount, invalidCount);
+
         return newVideos;
     }
 
@@ -147,14 +157,21 @@ public class CrawlerServiceImpl implements ICrawlerService {
      */
     private List<Video> saveAndReturnNewVideos(List<Video> crawledVideos) {
         List<Video> newVideos = new ArrayList<>();
+        int duplicateCount = 0;  // 重复视频计数
+        int invalidCount = 0;    // 无效视频计数（无番号）
+
+        log.info("开始处理爬取到的 {} 个视频", crawledVideos.size());
 
         for (Video video : crawledVideos) {
             if (video.getCode() == null) {
+                invalidCount++;
+                log.debug("跳过无效视频（无番号）: {}", video.getTitle());
                 continue;
             }
 
             if (videoMapper.existsByCode(video.getCode())) {
-                log.debug("视频已存在: {}", video.getCode());
+                duplicateCount++;
+                log.debug("视频已存在，跳过: {}", video.getCode());
                 continue;
             }
 
@@ -179,7 +196,10 @@ public class CrawlerServiceImpl implements ICrawlerService {
             log.info("新视频入库: {} - {}", video.getCode(), video.getTitle());
         }
 
-        log.info("本次抓取完成，新增{}个视频", newVideos.size());
+        // 输出汇总日志
+        log.info("本次抓取完成 - 总计: {}, 新增: {}, 重复: {}, 无效: {}",
+            crawledVideos.size(), newVideos.size(), duplicateCount, invalidCount);
+
         return newVideos;
     }
 }
