@@ -256,9 +256,17 @@ public class MissavCrawler {
                 Video video = parseVideoCard(card);
                 if (video != null && video.getCode() != null) {
                     videos.add(video);
+                } else {
+                    // 输出解析失败的元素信息用于调试
+                    log.warn("解析视频卡片失败，未提取到番号。元素HTML: {}",
+                        card.html().substring(0, Math.min(500, card.html().length())));
+                    if (video != null) {
+                        log.warn("提取到的信息: title={}, detailUrl={}, code={}",
+                            video.getTitle(), video.getDetailUrl(), video.getCode());
+                    }
                 }
             } catch (Exception e) {
-                log.debug("解析视频卡片失败", e);
+                log.warn("解析视频卡片异常", e);
             }
         }
 
@@ -290,6 +298,11 @@ public class MissavCrawler {
         String code = extractCode(video.getTitle());
         if (code == null && video.getDetailUrl() != null) {
             code = extractCode(video.getDetailUrl());
+        }
+
+        // 如果仍然没有提取到番号，尝试从URL路径中提取作为备用标识
+        if (code == null && video.getDetailUrl() != null) {
+            code = extractCodeFromUrl(video.getDetailUrl());
         }
         video.setCode(code);
 
@@ -536,6 +549,37 @@ public class MissavCrawler {
         Matcher matcher = CODE_PATTERN.matcher(text);
         if (matcher.find()) {
             return matcher.group(1).toUpperCase();
+        }
+        return null;
+    }
+
+    /**
+     * 从URL路径中提取标识符作为备用番号
+     * 例如: https://missav.ai/xxx/yyy/zzz → zzz
+     */
+    private String extractCodeFromUrl(String url) {
+        if (url == null || url.isEmpty()) {
+            return null;
+        }
+        try {
+            // 移除查询参数和锚点
+            String path = url.split("\\?")[0].split("#")[0];
+            // 移除末尾的斜杠
+            if (path.endsWith("/")) {
+                path = path.substring(0, path.length() - 1);
+            }
+            // 提取最后一段路径
+            String[] parts = path.split("/");
+            if (parts.length > 0) {
+                String lastPart = parts[parts.length - 1];
+                // 如果最后一段不为空，使用它作为标识符
+                if (!lastPart.isEmpty()) {
+                    log.debug("从URL提取备用标识符: {} -> {}", url, lastPart);
+                    return lastPart.toUpperCase();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("从URL提取标识符失败: {}", url, e);
         }
         return null;
     }
