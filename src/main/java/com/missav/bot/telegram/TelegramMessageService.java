@@ -78,7 +78,7 @@ public class TelegramMessageService {
             sb.append("⏱️ 时长: ").append(video.getDuration()).append(" 分钟\n");
         }
 
-        sb.append("\n🔗 ").append(video.getDetailUrl());
+        sb.append("\n🔗 ").append(escapeMarkdown(video.getDetailUrl()));
 
         return sb.toString();
     }
@@ -113,7 +113,7 @@ public class TelegramMessageService {
         String[] tagArr = tags.split(",\\s*");
         StringBuilder sb = new StringBuilder();
         for (String tag : tagArr) {
-            sb.append("#").append(tag.trim()).append(" ");
+            sb.append("#").append(escapeMarkdown(tag.trim())).append(" ");
         }
         return sb.toString().trim();
     }
