@@ -343,11 +343,10 @@ public class MissavCrawler {
 
                     Element img = card.selectFirst("img[src], img[data-src]");
                     if (img != null) {
-                        String coverUrl = img.attr("src");
-                        if (coverUrl.isEmpty()) {
-                            coverUrl = img.attr("data-src");
+                        String coverUrl = extractImageUrl(img);
+                        if (coverUrl != null && !coverUrl.isEmpty()) {
+                            video.setCoverUrl(coverUrl);
                         }
-                        video.setCoverUrl(coverUrl);
                     }
 
                     if (video.getCode() != null) {
@@ -408,11 +407,10 @@ public class MissavCrawler {
         // 提取封面图
         Element img = card.selectFirst("img");
         if (img != null) {
-            String coverUrl = img.attr("data-src");
-            if (coverUrl.isEmpty()) {
-                coverUrl = img.attr("src");
+            String coverUrl = extractImageUrl(img);
+            if (coverUrl != null && !coverUrl.isEmpty()) {
+                video.setCoverUrl(coverUrl);
             }
-            video.setCoverUrl(coverUrl);
         }
 
         // 提取时长
@@ -642,6 +640,35 @@ public class MissavCrawler {
 
         log.info("关键词搜索完成，共抓取 {} 个视频", videos.size());
         return videos;
+    }
+
+    /**
+     * 从 img 元素中提取真实的图片 URL
+     * 尝试多个可能的属性，过滤掉 base64 占位符
+     */
+    private String extractImageUrl(Element img) {
+        if (img == null) {
+            return null;
+        }
+
+        // 按优先级尝试多个属性
+        String[] attributes = {"data-original", "data-lazy-src", "data-src", "srcset", "src"};
+
+        for (String attr : attributes) {
+            String url = img.attr(attr);
+            if (url != null && !url.isEmpty() && !url.startsWith("data:")) {
+                // 如果是 srcset，取第一个 URL
+                if (attr.equals("srcset") && url.contains(" ")) {
+                    url = url.split("\\s+")[0];
+                }
+                // 验证是否为有效的 HTTP/HTTPS URL
+                if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) {
+                    return url;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
