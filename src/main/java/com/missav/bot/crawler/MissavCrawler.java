@@ -33,6 +33,8 @@ public class MissavCrawler {
 
     private final OkHttpClient httpClient;
     private final Map<String, List<Cookie>> cookieStore = new HashMap<>();
+    private volatile LocalDateTime cookieInitTime = null;  // Cookie 初始化时间
+    private static final Duration COOKIE_EXPIRE_DURATION = Duration.ofMinutes(10);  // Cookie 有效期10分钟
 
     @Value("${crawler.user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36}")
     private String userAgent;
@@ -62,14 +64,25 @@ public class MissavCrawler {
      * 初始化 Cookie - 多次请求建立会话
      */
     private void initCookies() {
-        // 如果已有 Cookie，跳过初始化
-        if (!cookieStore.isEmpty()) {
-            log.debug("Cookie 已存在，跳过初始化");
+        // 检查 Cookie 是否需要刷新
+        boolean needRefresh = cookieStore.isEmpty()
+                || cookieInitTime == null
+                || Duration.between(cookieInitTime, LocalDateTime.now()).compareTo(COOKIE_EXPIRE_DURATION) > 0;
+
+        if (!needRefresh) {
+            log.debug("Cookie 仍然有效，跳过初始化（已使用 {} 分钟）",
+                Duration.between(cookieInitTime, LocalDateTime.now()).toMinutes());
             return;
         }
 
         try {
-            log.info("初始化 Cookie（预热会话）...");
+            if (cookieStore.isEmpty()) {
+                log.info("初始化 Cookie（预热会话）...");
+            } else {
+                log.info("Cookie 已过期，重新初始化（上次初始化: {}）", cookieInitTime);
+                cookieStore.clear();  // 清除过期 Cookie
+            }
+
             // 网站需要多次请求才能建立有效会话，进行 2-3 次预热请求
             for (int i = 1; i <= 3; i++) {
                 fetchHtml(NEW_VIDEOS_URL + "?page=2");
@@ -77,6 +90,8 @@ public class MissavCrawler {
                     Thread.sleep(1000); // 请求间隔 1 秒
                 }
             }
+
+            cookieInitTime = LocalDateTime.now();  // 记录初始化时间
             log.info("Cookie 初始化完成");
         } catch (Exception e) {
             log.warn("Cookie 初始化失败", e);
