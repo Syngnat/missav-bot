@@ -78,7 +78,7 @@ public class TelegramMessageService {
             sb.append("⏱️ 时长: ").append(video.getDuration()).append(" 分钟\n");
         }
 
-        sb.append("\n🔗 ").append(escapeMarkdown(video.getDetailUrl()));
+        sb.append("\n🔗 [查看详情](").append(video.getDetailUrl()).append(")");
 
         return sb.toString();
     }
