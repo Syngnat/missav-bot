@@ -26,4 +26,13 @@ public interface PushRecordMapper extends BaseMapper<PushRecord> {
 
     @Select("SELECT * FROM push_records WHERE status = #{status} ORDER BY pushed_at ASC")
     List<PushRecord> selectByStatusOrderByPushedAtAsc(@Param("status") String status);
+
+    @Select("<script>" +
+            "SELECT chat_id FROM push_records WHERE video_id = #{videoId} AND status = #{status} " +
+            "AND chat_id IN " +
+            "<foreach collection='chatIds' item='chatId' open='(' separator=',' close=')'>" +
+            "#{chatId}" +
+            "</foreach>" +
+            "</script>")
+    List<Long> selectPushedChatIds(@Param("videoId") Long videoId, @Param("chatIds") List<Long> chatIds, @Param("status") String status);
 }

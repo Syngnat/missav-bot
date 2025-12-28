@@ -31,62 +31,76 @@ public class PushServiceImpl implements IPushService {
     @Override
     @Transactional
     public void pushVideoToSubscribers(Video video) {
-        Set<Long> pushedChatIds = new HashSet<>();
-
-        List<Subscription> allSubs = subscriptionService.getAllSubscriptions();
-        for (Subscription sub : allSubs) {
-            if (pushedChatIds.contains(sub.getChatId())) {
-                continue;
-            }
-            pushToChatInternal(video, sub.getChatId());
-            pushedChatIds.add(sub.getChatId());
-        }
-
-        if (video.getActresses() != null) {
-            String[] actresses = video.getActresses().split(",\\s*");
-            for (String actress : actresses) {
-                List<Subscription> actressSubs = subscriptionService.getActressSubscriptions(actress.trim());
-                for (Subscription sub : actressSubs) {
-                    if (pushedChatIds.contains(sub.getChatId())) {
-                        continue;
-                    }
-                    pushToChatInternal(video, sub.getChatId());
-                    pushedChatIds.add(sub.getChatId());
-                }
-            }
-        }
-
-        if (video.getTags() != null) {
-            String[] tags = video.getTags().split(",\\s*");
-            for (String tag : tags) {
-                List<Subscription> tagSubs = subscriptionService.getTagSubscriptions(tag.trim());
-                for (Subscription sub : tagSubs) {
-                    if (pushedChatIds.contains(sub.getChatId())) {
-                        continue;
-                    }
-                    pushToChatInternal(video, sub.getChatId());
-                    pushedChatIds.add(sub.getChatId());
-                }
-            }
-        }
-
-        if (!pushedChatIds.isEmpty()) {
+        // 一次性加载所有订阅
+        List<Subscription> allSubscriptions = subscriptionService.list();
+        if (allSubscriptions.isEmpty()) {
             crawlerService.markAsPushed(video.getId());
-            log.info("视频 {} 已推送给 {} 个订阅者", video.getCode(), pushedChatIds.size());
-        } else {
-            // 没有订阅者，也标记为已推送，避免后续订阅时刷屏
-            crawlerService.markAsPushed(video.getId());
-            log.debug("视频 {} 没有订阅者，已标记为已推送", video.getCode());
-        }
-    }
-
-    private void pushToChatInternal(Video video, Long chatId) {
-        if (pushRecordMapper.existsByVideoIdAndChatIdAndStatus(
-                video.getId(), chatId, PushRecord.PushStatus.SUCCESS.name())) {
-            log.debug("视频已推送过: videoId={}, chatId={}", video.getId(), chatId);
+            log.debug("没有任何订阅，视频 {} 已标记为已推送", video.getCode());
             return;
         }
 
+        // 在内存中匹配订阅，收集所有需要推送的 chatId
+        Set<Long> targetChatIds = new HashSet<>();
+
+        for (Subscription sub : allSubscriptions) {
+            boolean matches = false;
+
+            if (sub.getType() == Subscription.SubscriptionType.ALL) {
+                matches = true;
+            } else if (sub.getType() == Subscription.SubscriptionType.ACTRESS && video.getActresses() != null) {
+                String[] actresses = video.getActresses().split(",\\s*");
+                for (String actress : actresses) {
+                    if (actress.trim().equals(sub.getKeyword())) {
+                        matches = true;
+                        break;
+                    }
+                }
+            } else if (sub.getType() == Subscription.SubscriptionType.TAG && video.getTags() != null) {
+                String[] tags = video.getTags().split(",\\s*");
+                for (String tag : tags) {
+                    if (tag.trim().equals(sub.getKeyword())) {
+                        matches = true;
+                        break;
+                    }
+                }
+            }
+
+            if (matches) {
+                targetChatIds.add(sub.getChatId());
+            }
+        }
+
+        if (targetChatIds.isEmpty()) {
+            crawlerService.markAsPushed(video.getId());
+            log.debug("视频 {} 没有匹配的订阅者，已标记为已推送", video.getCode());
+            return;
+        }
+
+        // 批量查询已推送的 chatId
+        List<Long> pushedChatIds = pushRecordMapper.selectPushedChatIds(
+            video.getId(),
+            new java.util.ArrayList<>(targetChatIds),
+            PushRecord.PushStatus.SUCCESS.name()
+        );
+        targetChatIds.removeAll(pushedChatIds);
+
+        if (targetChatIds.isEmpty()) {
+            crawlerService.markAsPushed(video.getId());
+            log.debug("视频 {} 已推送给所有订阅者", video.getCode());
+            return;
+        }
+
+        // 推送给剩余的 chatId
+        log.info("视频 {} 需要推送给 {} 个订阅者", video.getCode(), targetChatIds.size());
+        for (Long chatId : targetChatIds) {
+            pushToChatInternal(video, chatId);
+        }
+
+        crawlerService.markAsPushed(video.getId());
+        log.info("视频 {} 推送完成，共推送给 {} 个订阅者", video.getCode(), targetChatIds.size());
+    }
+
+    private void pushToChatInternal(Video video, Long chatId) {
         boolean success = telegramMessageService.pushVideo(chatId, video);
 
         PushRecord record = PushRecord.builder()
@@ -105,7 +119,7 @@ public class PushServiceImpl implements IPushService {
         }
 
         try {
-            Thread.sleep(500);
+            Thread.sleep(50);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
