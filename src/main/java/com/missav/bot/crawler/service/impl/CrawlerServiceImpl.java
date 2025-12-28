@@ -35,7 +35,7 @@ public class CrawlerServiceImpl implements ICrawlerService {
         int duplicateCount = 0;
         int invalidCount = 0;
 
-        log.info("开始处理爬取到的 {} 个视频", crawledVideos.size());
+        log.debug("开始处理爬取到的 {} 个视频", crawledVideos.size());
 
         // 过滤无效视频
         List<Video> validVideos = new ArrayList<>();
@@ -49,7 +49,7 @@ public class CrawlerServiceImpl implements ICrawlerService {
         }
 
         if (validVideos.isEmpty()) {
-            log.info("没有有效视频需要处理");
+            log.debug("没有有效视频需要处理");
             log.info("本次抓取完成 - 总计: {}, 新增: 0, 重复: 0, 无效: {}",
                 crawledVideos.size(), invalidCount);
             return newVideos;
@@ -152,7 +152,7 @@ public class CrawlerServiceImpl implements ICrawlerService {
     @Override
     @Transactional
     public CrawlResult crawlByActor(String actorName, Integer limit) {
-        log.info("开始按演员爬取: {}, 限制: {}", actorName, limit);
+        log.debug("开始按演员爬取: {}, 限制: {}", actorName, limit);
         List<Video> crawledVideos = crawler.crawlByActor(actorName, limit);
         return saveAndReturnResult(crawledVideos);
     }
@@ -160,11 +160,11 @@ public class CrawlerServiceImpl implements ICrawlerService {
     @Override
     @Transactional
     public Video crawlByCode(String code) {
-        log.info("开始按番号爬取: {}", code);
+        log.debug("开始按番号爬取: {}", code);
 
         // 先检查数据库是否已存在
         if (videoMapper.existsByCode(code)) {
-            log.info("番号 {} 已存在于数据库", code);
+            log.debug("番号 {} 已存在于数据库", code);
             return videoMapper.selectByCode(code);
         }
 
@@ -184,7 +184,7 @@ public class CrawlerServiceImpl implements ICrawlerService {
     @Override
     @Transactional
     public CrawlResult crawlByKeyword(String keyword, Integer limit) {
-        log.info("开始按关键词搜索: {}, 限制: {}", keyword, limit);
+        log.debug("开始按关键词搜索: {}, 限制: {}", keyword, limit);
         List<Video> crawledVideos = crawler.crawlByKeyword(keyword, limit);
         return saveAndReturnResult(crawledVideos);
     }
@@ -197,7 +197,7 @@ public class CrawlerServiceImpl implements ICrawlerService {
         int duplicateCount = 0;
         int invalidCount = 0;
 
-        log.info("开始处理爬取到的 {} 个视频", crawledVideos.size());
+        log.debug("开始处理爬取到的 {} 个视频", crawledVideos.size());
 
         // 过滤无效视频
         List<Video> validVideos = new ArrayList<>();
@@ -211,7 +211,7 @@ public class CrawlerServiceImpl implements ICrawlerService {
         }
 
         if (validVideos.isEmpty()) {
-            log.info("没有有效视频需要处理");
+            log.debug("没有有效视频需要处理");
             return new CrawlResult(newVideos, crawledVideos.size(), duplicateCount, invalidCount);
         }
 

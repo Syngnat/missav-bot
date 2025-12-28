@@ -91,7 +91,7 @@ public class PushServiceImpl implements IPushService {
         }
 
         // 推送给剩余的 chatId
-        log.info("视频 {} 需要推送给 {} 个订阅者", video.getCode(), targetChatIds.size());
+        log.debug("视频 {} 需要推送给 {} 个订阅者", video.getCode(), targetChatIds.size());
         for (Long chatId : targetChatIds) {
             pushToChatInternal(video, chatId);
         }
@@ -134,7 +134,7 @@ public class PushServiceImpl implements IPushService {
     @Transactional
     public void pushUnpushedVideos() {
         List<Video> unpushedVideos = crawlerService.getUnpushedVideos();
-        log.info("待推送视频数: {}", unpushedVideos.size());
+        log.debug("待推送视频数: {}", unpushedVideos.size());
 
         for (Video video : unpushedVideos) {
             pushVideoToSubscribers(video);
