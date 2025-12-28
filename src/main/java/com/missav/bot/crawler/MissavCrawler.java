@@ -162,8 +162,8 @@ public class MissavCrawler {
                 .build();
 
         try (Response response = httpClient.newCall(request).execute()) {
-            log.info("HTTP 响应状态: {} - {}", response.code(), response.message());
-            log.info("最终 URL (重定向后): {}", response.request().url());
+            log.debug("HTTP 响应状态: {} - {}", response.code(), response.message());
+            log.debug("最终 URL (重定向后): {}", response.request().url());
 
             if (!response.isSuccessful()) {
                 log.warn("请求失败: {} - {}", url, response.code());
@@ -172,8 +172,8 @@ public class MissavCrawler {
 
             String html = response.body() != null ? response.body().string() : null;
             if (html != null) {
-                log.info("HTML 长度: {} 字符", html.length());
-                log.info("HTML 前500字符: {}", html.substring(0, Math.min(500, html.length())));
+                log.debug("HTML 长度: {} 字符", html.length());
+                log.debug("HTML 前500字符: {}", html.substring(0, Math.min(500, html.length())));
             } else {
                 log.warn("响应体为空");
             }
@@ -193,8 +193,8 @@ public class MissavCrawler {
         Document doc = Jsoup.parse(html);
 
         // 输出页面基本信息用于调试
-        log.info("页面标题: {}", doc.title());
-        log.info("页面包含的主要 div 类: {}", doc.select("div[class]").stream()
+        log.debug("页面标题: {}", doc.title());
+        log.debug("页面包含的主要 div 类: {}", doc.select("div[class]").stream()
             .limit(10)
             .map(e -> e.className())
             .distinct()
@@ -228,7 +228,7 @@ public class MissavCrawler {
             }
         }
 
-        log.info("最终使用的选择器匹配到 {} 个视频卡片", videoCards.size());
+        log.debug("最终使用的选择器匹配到 {} 个视频卡片", videoCards.size());
 
         for (Element card : videoCards) {
             try {
