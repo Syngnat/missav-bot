@@ -9,6 +9,7 @@ import com.missav.bot.crawler.service.ICrawlerService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
@@ -36,9 +37,17 @@ public class MissavBot extends TelegramLongPollingBot {
     private String botUsername;
 
     public MissavBot(ISubscriptionService subscriptionService, VideoMapper videoMapper, ICrawlerService crawlerService) {
+        super(createBotOptions());
         this.subscriptionService = subscriptionService;
         this.videoMapper = videoMapper;
         this.crawlerService = crawlerService;
+    }
+
+    private static DefaultBotOptions createBotOptions() {
+        DefaultBotOptions options = new DefaultBotOptions();
+        options.setGetUpdatesTimeout(75);  // 增加轮询超时到 75 秒
+        options.setMaxThreads(1);  // 减少线程数
+        return options;
     }
 
     @Override
