@@ -605,8 +605,20 @@ public class MissavCrawler {
         Elements scripts = doc.select("script");
         log.info("找到 {} 个 script 标签", scripts.size());
 
+        int scriptIndex = 0;
         for (Element script : scripts) {
             String scriptContent = script.html();
+            scriptIndex++;
+
+            // 输出每个 script 的前 200 字符用于分析
+            if (scriptContent.length() > 0) {
+                log.info("Script #{} (长度: {} 字符) 前200字符: {}",
+                    scriptIndex,
+                    scriptContent.length(),
+                    scriptContent.substring(0, Math.min(200, scriptContent.length())));
+            } else {
+                log.info("Script #{} 为空", scriptIndex);
+            }
 
             // 查找可能包含视频数据的 JSON
             // 常见模式: window.__INITIAL_STATE__, window.DATA, 或直接的 JSON 数组
