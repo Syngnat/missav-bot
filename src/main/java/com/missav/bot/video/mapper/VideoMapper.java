@@ -53,4 +53,15 @@ public interface VideoMapper extends BaseMapper<Video> {
      */
     @Select("SELECT * FROM videos ORDER BY created_time DESC LIMIT 50")
     List<Video> selectTop50ByCreatedTimeDesc();
+
+    /**
+     * 批量检查番号是否存在
+     */
+    @Select("<script>" +
+            "SELECT code FROM videos WHERE code IN " +
+            "<foreach collection='codes' item='code' open='(' separator=',' close=')'>" +
+            "#{code}" +
+            "</foreach>" +
+            "</script>")
+    List<String> selectExistingCodes(@Param("codes") List<String> codes);
 }

@@ -32,24 +32,52 @@ public class CrawlerServiceImpl implements ICrawlerService {
     public List<Video> crawlAndSaveNewVideos(int pages) {
         List<Video> crawledVideos = crawler.crawlNewVideos(pages);
         List<Video> newVideos = new ArrayList<>();
-        int duplicateCount = 0;  // 重复视频计数
-        int invalidCount = 0;    // 无效视频计数（无番号）
+        int duplicateCount = 0;
+        int invalidCount = 0;
 
         log.info("开始处理爬取到的 {} 个视频", crawledVideos.size());
 
+        // 过滤无效视频
+        List<Video> validVideos = new ArrayList<>();
         for (Video video : crawledVideos) {
             if (video.getCode() == null) {
                 invalidCount++;
                 log.debug("跳过无效视频（无番号）: {}", video.getTitle());
-                continue;
+            } else {
+                validVideos.add(video);
             }
+        }
 
-            if (videoMapper.existsByCode(video.getCode())) {
-                duplicateCount++;
+        if (validVideos.isEmpty()) {
+            log.info("没有有效视频需要处理");
+            log.info("本次抓取完成 - 总计: {}, 新增: 0, 重复: 0, 无效: {}",
+                crawledVideos.size(), invalidCount);
+            return newVideos;
+        }
+
+        // 批量检查重复
+        List<String> codes = validVideos.stream().map(Video::getCode).toList();
+        List<String> existingCodes = videoMapper.selectExistingCodes(codes);
+        java.util.Set<String> existingCodeSet = new java.util.HashSet<>(existingCodes);
+        duplicateCount = existingCodes.size();
+
+        // 过滤出新视频
+        for (Video video : validVideos) {
+            if (existingCodeSet.contains(video.getCode())) {
                 log.debug("视频已存在，跳过: {}", video.getCode());
-                continue;
+            } else {
+                newVideos.add(video);
             }
+        }
 
+        if (newVideos.isEmpty()) {
+            log.info("本次抓取完成 - 总计: {}, 新增: 0, 重复: {}, 无效: {}",
+                crawledVideos.size(), duplicateCount, invalidCount);
+            return newVideos;
+        }
+
+        // 补充详情信息（如需要）
+        for (Video video : newVideos) {
             if (video.getDetailUrl() != null &&
                 (video.getActresses() == null || video.getPreviewUrl() == null)) {
                 try {
@@ -57,20 +85,21 @@ public class CrawlerServiceImpl implements ICrawlerService {
                     if (detail != null) {
                         mergeVideoInfo(video, detail);
                     }
-                    Thread.sleep(1000);
+                    Thread.sleep(200);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
                 }
             }
-
             video.setPushed(false);
+        }
+
+        // 批量插入
+        for (Video video : newVideos) {
             videoMapper.insert(video);
-            newVideos.add(video);
             log.info("新视频入库: {} - {}", video.getCode(), video.getTitle());
         }
 
-        // 输出汇总日志
         log.info("本次抓取完成 - 总计: {}, 新增: {}, 重复: {}, 无效: {}",
             crawledVideos.size(), newVideos.size(), duplicateCount, invalidCount);
 
@@ -158,25 +187,50 @@ public class CrawlerServiceImpl implements ICrawlerService {
      */
     private CrawlResult saveAndReturnResult(List<Video> crawledVideos) {
         List<Video> newVideos = new ArrayList<>();
-        int duplicateCount = 0;  // 重复视频计数
-        int invalidCount = 0;    // 无效视频计数（无番号）
+        int duplicateCount = 0;
+        int invalidCount = 0;
 
         log.info("开始处理爬取到的 {} 个视频", crawledVideos.size());
 
+        // 过滤无效视频
+        List<Video> validVideos = new ArrayList<>();
         for (Video video : crawledVideos) {
             if (video.getCode() == null) {
                 invalidCount++;
                 log.debug("跳过无效视频（无番号）: {}", video.getTitle());
-                continue;
+            } else {
+                validVideos.add(video);
             }
+        }
 
-            if (videoMapper.existsByCode(video.getCode())) {
-                duplicateCount++;
+        if (validVideos.isEmpty()) {
+            log.info("没有有效视频需要处理");
+            return new CrawlResult(newVideos, crawledVideos.size(), duplicateCount, invalidCount);
+        }
+
+        // 批量检查重复
+        List<String> codes = validVideos.stream().map(Video::getCode).toList();
+        List<String> existingCodes = videoMapper.selectExistingCodes(codes);
+        java.util.Set<String> existingCodeSet = new java.util.HashSet<>(existingCodes);
+        duplicateCount = existingCodes.size();
+
+        // 过滤出新视频
+        for (Video video : validVideos) {
+            if (existingCodeSet.contains(video.getCode())) {
                 log.debug("视频已存在，跳过: {}", video.getCode());
-                continue;
+            } else {
+                newVideos.add(video);
             }
+        }
 
-            // 如果需要，抓取详情页补充信息
+        if (newVideos.isEmpty()) {
+            log.info("本次抓取完成 - 总计: {}, 新增: 0, 重复: {}, 无效: {}",
+                crawledVideos.size(), duplicateCount, invalidCount);
+            return new CrawlResult(newVideos, crawledVideos.size(), duplicateCount, invalidCount);
+        }
+
+        // 补充详情信息（如需要）
+        for (Video video : newVideos) {
             if (video.getDetailUrl() != null &&
                 (video.getActresses() == null || video.getPreviewUrl() == null)) {
                 try {
@@ -184,20 +238,21 @@ public class CrawlerServiceImpl implements ICrawlerService {
                     if (detail != null) {
                         mergeVideoInfo(video, detail);
                     }
-                    Thread.sleep(1000);
+                    Thread.sleep(200);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
                 }
             }
-
             video.setPushed(false);
+        }
+
+        // 批量插入
+        for (Video video : newVideos) {
             videoMapper.insert(video);
-            newVideos.add(video);
             log.info("新视频入库: {} - {}", video.getCode(), video.getTitle());
         }
 
-        // 输出汇总日志
         log.info("本次抓取完成 - 总计: {}, 新增: {}, 重复: {}, 无效: {}",
             crawledVideos.size(), newVideos.size(), duplicateCount, invalidCount);
 
