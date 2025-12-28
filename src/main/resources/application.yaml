@@ -5,6 +5,10 @@ spring:
   application:
     name: missav-bot
 
+  servlet:
+    multipart:
+      enabled: false  # 禁用文件上传解析，Bot 不需要此功能
+
   sql:
     init:
       mode: never
