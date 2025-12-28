@@ -6,17 +6,21 @@ import com.missav.bot.video.entity.Video;
 import com.missav.bot.video.mapper.VideoMapper;
 import com.missav.bot.subscription.service.ISubscriptionService;
 import com.missav.bot.crawler.service.ICrawlerService;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.send.SendVideo;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
+import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.*;
@@ -48,6 +52,26 @@ public class MissavBot extends TelegramLongPollingBot {
         options.setGetUpdatesTimeout(75);  // 增加轮询超时到 75 秒
         options.setMaxThreads(1);  // 减少线程数
         return options;
+    }
+
+    @PostConstruct
+    public void setupCommands() {
+        try {
+            List<BotCommand> commands = new ArrayList<>();
+            commands.add(new BotCommand("start", "开始使用"));
+            commands.add(new BotCommand("help", "查看帮助"));
+            commands.add(new BotCommand("subscribe", "订阅新片"));
+            commands.add(new BotCommand("unsubscribe", "取消订阅"));
+            commands.add(new BotCommand("list", "我的订阅"));
+            commands.add(new BotCommand("latest", "最新视频"));
+            commands.add(new BotCommand("search", "搜索视频"));
+            commands.add(new BotCommand("status", "机器人状态"));
+
+            execute(new SetMyCommands(commands, new BotCommandScopeDefault(), null));
+            log.info("Bot 命令菜单设置成功");
+        } catch (TelegramApiException e) {
+            log.error("设置 Bot 命令菜单失败", e);
+        }
     }
 
     @Override
