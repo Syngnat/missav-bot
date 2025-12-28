@@ -4,6 +4,7 @@ import com.missav.bot.crawler.CrawlResult;
 import com.missav.bot.push.service.IPushService;
 import com.missav.bot.subscription.entity.Subscription;
 import com.missav.bot.subscription.entity.Subscription.SubscriptionType;
+import com.missav.bot.telegram.TelegramMessageService;
 import com.missav.bot.video.entity.Video;
 import com.missav.bot.video.mapper.VideoMapper;
 import com.missav.bot.subscription.service.ISubscriptionService;
@@ -36,6 +37,7 @@ public class MissavBot extends TelegramLongPollingBot {
     private final VideoMapper videoMapper;
     private final ICrawlerService crawlerService;
     private final IPushService pushService;
+    private final TelegramMessageService telegramMessageService;
 
     @Value("${telegram.bot.token}")
     private String botToken;
@@ -44,12 +46,17 @@ public class MissavBot extends TelegramLongPollingBot {
     private String botUsername;
 
     public MissavBot(ISubscriptionService subscriptionService, VideoMapper videoMapper,
-                     ICrawlerService crawlerService, IPushService pushService) {
+                     ICrawlerService crawlerService, IPushService pushService,
+                     TelegramMessageService telegramMessageService) {
         super(createBotOptions());
         this.subscriptionService = subscriptionService;
         this.videoMapper = videoMapper;
         this.crawlerService = crawlerService;
         this.pushService = pushService;
+        this.telegramMessageService = telegramMessageService;
+
+        // 设置 TelegramMessageService 的 bot 实例
+        this.telegramMessageService.setBot(this);
     }
 
     private static DefaultBotOptions createBotOptions() {

@@ -1,11 +1,11 @@
 package com.missav.bot.push.service.impl;
 
-import com.missav.bot.bot.MissavBot;
 import com.missav.bot.push.entity.PushRecord;
 import com.missav.bot.push.mapper.PushRecordMapper;
 import com.missav.bot.push.service.IPushService;
 import com.missav.bot.subscription.entity.Subscription;
 import com.missav.bot.subscription.service.ISubscriptionService;
+import com.missav.bot.telegram.TelegramMessageService;
 import com.missav.bot.video.entity.Video;
 import com.missav.bot.crawler.service.ICrawlerService;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class PushServiceImpl implements IPushService {
 
-    private final MissavBot missavBot;
+    private final TelegramMessageService telegramMessageService;
     private final ISubscriptionService subscriptionService;
     private final ICrawlerService crawlerService;
     private final PushRecordMapper pushRecordMapper;
@@ -87,7 +87,7 @@ public class PushServiceImpl implements IPushService {
             return;
         }
 
-        boolean success = missavBot.pushVideo(chatId, video);
+        boolean success = telegramMessageService.pushVideo(chatId, video);
 
         PushRecord record = PushRecord.builder()
                 .videoId(video.getId())
