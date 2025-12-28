@@ -1,5 +1,6 @@
 package com.missav.bot.crawler.service;
 
+import com.missav.bot.crawler.CrawlResult;
 import com.missav.bot.video.entity.Video;
 
 import java.util.List;
@@ -38,9 +39,9 @@ public interface ICrawlerService {
      * 按演员名爬取作品
      * @param actorName 演员名
      * @param limit 限制数量，null 表示全部
-     * @return 新爬取的视频列表
+     * @return 爬取结果（包含新增、重复、总数等信息）
      */
-    List<Video> crawlByActor(String actorName, Integer limit);
+    CrawlResult crawlByActor(String actorName, Integer limit);
 
     /**
      * 按番号爬取作品
@@ -53,7 +54,7 @@ public interface ICrawlerService {
      * 按关键词搜索爬取
      * @param keyword 关键词
      * @param limit 限制数量，null 表示全部
-     * @return 新爬取的视频列表
+     * @return 爬取结果（包含新增、重复、总数等信息）
      */
-    List<Video> crawlByKeyword(String keyword, Integer limit);
+    CrawlResult crawlByKeyword(String keyword, Integer limit);
 }

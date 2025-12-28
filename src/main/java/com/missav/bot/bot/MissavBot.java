@@ -1,5 +1,6 @@
 package com.missav.bot.bot;
 
+import com.missav.bot.crawler.CrawlResult;
 import com.missav.bot.subscription.entity.Subscription;
 import com.missav.bot.subscription.entity.Subscription.SubscriptionType;
 import com.missav.bot.video.entity.Video;
@@ -415,19 +416,29 @@ public class MissavBot extends TelegramLongPollingBot {
         // 异步执行爬取，避免阻塞
         new Thread(() -> {
             try {
-                List<Video> videos = service.crawlByActor(actorName, finalLimit);
+                CrawlResult result = service.crawlByActor(actorName, finalLimit);
 
-                if (videos.isEmpty()) {
-                    sendText(chatId, String.format("🔍 未找到演员「%s」的作品", actorName));
+                if (result.getNewVideos().isEmpty()) {
+                    // 显示详细结果
+                    if (result.getTotalCrawled() == 0) {
+                        sendText(chatId, String.format("🔍 未找到演员「%s」的作品", actorName));
+                    } else {
+                        sendText(chatId, String.format("📊 爬取完成，但全部为重复视频\n" +
+                            "总计: %d | 新增: 0 | 重复: %d",
+                            result.getTotalCrawled(), result.getDuplicateCount()));
+                    }
                     return;
                 }
 
-                sendText(chatId, String.format("✅ 爬取完成，共找到 %d 个作品", videos.size()));
+                // 显示详细结果
+                sendText(chatId, String.format("✅ 爬取完成\n" +
+                    "📊 总计: %d | 🆕 新增: %d | 🔄 重复: %d",
+                    result.getTotalCrawled(), result.getNewCount(), result.getDuplicateCount()));
 
-                // 推送每个视频给触发者
-                for (Video video : videos) {
+                // 推送每个新视频给触发者
+                for (Video video : result.getNewVideos()) {
                     pushVideo(chatId, video);
-                    Thread.sleep(1000); // 避免发送过快
+                    Thread.sleep(1000);
                 }
             } catch (Exception e) {
                 log.error("爬取演员作品失败", e);
@@ -506,17 +517,27 @@ public class MissavBot extends TelegramLongPollingBot {
         // 异步执行爬取
         new Thread(() -> {
             try {
-                List<Video> videos = service.crawlByKeyword(keyword, finalLimit);
+                CrawlResult result = service.crawlByKeyword(keyword, finalLimit);
 
-                if (videos.isEmpty()) {
-                    sendText(chatId, String.format("🔍 未找到关键词「%s」相关的作品", keyword));
+                if (result.getNewVideos().isEmpty()) {
+                    // 显示详细结果
+                    if (result.getTotalCrawled() == 0) {
+                        sendText(chatId, String.format("🔍 未找到关键词「%s」相关的作品", keyword));
+                    } else {
+                        sendText(chatId, String.format("📊 搜索完成，但全部为重复视频\n" +
+                            "总计: %d | 新增: 0 | 重复: %d",
+                            result.getTotalCrawled(), result.getDuplicateCount()));
+                    }
                     return;
                 }
 
-                sendText(chatId, String.format("✅ 搜索完成，共找到 %d 个作品", videos.size()));
+                // 显示详细结果
+                sendText(chatId, String.format("✅ 搜索完成\n" +
+                    "📊 总计: %d | 🆕 新增: %d | 🔄 重复: %d",
+                    result.getTotalCrawled(), result.getNewCount(), result.getDuplicateCount()));
 
-                // 推送每个视频给触发者
-                for (Video video : videos) {
+                // 推送每个新视频给触发者
+                for (Video video : result.getNewVideos()) {
                     pushVideo(chatId, video);
                     Thread.sleep(1000);
                 }

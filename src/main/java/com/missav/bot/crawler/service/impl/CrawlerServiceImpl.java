@@ -1,5 +1,6 @@
 package com.missav.bot.crawler.service.impl;
 
+import com.missav.bot.crawler.CrawlResult;
 import com.missav.bot.crawler.MissavCrawler;
 import com.missav.bot.crawler.service.ICrawlerService;
 import com.missav.bot.video.entity.Video;
@@ -114,10 +115,10 @@ public class CrawlerServiceImpl implements ICrawlerService {
 
     @Override
     @Transactional
-    public List<Video> crawlByActor(String actorName, Integer limit) {
+    public CrawlResult crawlByActor(String actorName, Integer limit) {
         log.info("开始按演员爬取: {}, 限制: {}", actorName, limit);
         List<Video> crawledVideos = crawler.crawlByActor(actorName, limit);
-        return saveAndReturnNewVideos(crawledVideos);
+        return saveAndReturnResult(crawledVideos);
     }
 
     @Override
@@ -146,16 +147,16 @@ public class CrawlerServiceImpl implements ICrawlerService {
 
     @Override
     @Transactional
-    public List<Video> crawlByKeyword(String keyword, Integer limit) {
+    public CrawlResult crawlByKeyword(String keyword, Integer limit) {
         log.info("开始按关键词搜索: {}, 限制: {}", keyword, limit);
         List<Video> crawledVideos = crawler.crawlByKeyword(keyword, limit);
-        return saveAndReturnNewVideos(crawledVideos);
+        return saveAndReturnResult(crawledVideos);
     }
 
     /**
-     * 保存爬取的视频并返回新视频列表（去重）
+     * 保存爬取的视频并返回爬取结果（去重）
      */
-    private List<Video> saveAndReturnNewVideos(List<Video> crawledVideos) {
+    private CrawlResult saveAndReturnResult(List<Video> crawledVideos) {
         List<Video> newVideos = new ArrayList<>();
         int duplicateCount = 0;  // 重复视频计数
         int invalidCount = 0;    // 无效视频计数（无番号）
@@ -200,6 +201,6 @@ public class CrawlerServiceImpl implements ICrawlerService {
         log.info("本次抓取完成 - 总计: {}, 新增: {}, 重复: {}, 无效: {}",
             crawledVideos.size(), newVideos.size(), duplicateCount, invalidCount);
 
-        return newVideos;
+        return new CrawlResult(newVideos, crawledVideos.size(), duplicateCount, invalidCount);
     }
 }
