@@ -35,6 +35,10 @@ telegram:
     token: ${BOT_TOKEN:YOUR_BOT_TOKEN}
     username: ${BOT_USERNAME:YOUR_BOT_USERNAME}
     default-chat-id: ${BOT_CHAT_ID:0}
+  proxy:
+    enabled: ${TELEGRAM_PROXY_ENABLED:false}  # 默认关闭，开发环境可设置为 true
+    host: ${TELEGRAM_PROXY_HOST:127.0.0.1}
+    port: ${TELEGRAM_PROXY_PORT:7890}
 
 crawler:
   enabled: ${CRAWLER_ENABLED:true}

@@ -246,6 +246,32 @@ crawler:
   user-agent: Mozilla/5.0   # User-Agent
 ```
 
+### 代理配置
+
+如果你的服务器无法直接访问 Telegram API（如在中国大陆），可以配置代理：
+
+```yaml
+telegram:
+  proxy:
+    enabled: true           # 是否启用代理（默认 false）
+    host: 127.0.0.1        # 代理服务器地址
+    port: 7890             # 代理服务器端口
+```
+
+**环境变量方式**：
+
+```bash
+# 启用代理
+export TELEGRAM_PROXY_ENABLED=true
+export TELEGRAM_PROXY_HOST=127.0.0.1
+export TELEGRAM_PROXY_PORT=7890
+```
+
+**注意**：
+- 生产环境通常不需要代理（海外服务器可直连 Telegram API）
+- 开发环境或特殊网络环境下才需要启用代理
+- 支持 HTTP 代理类型
+
 ### 日志配置
 
 ```yaml
@@ -302,6 +328,19 @@ BOT_USERNAME=YourBotUsername
 # 2. 访问：https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
 # 3. 在返回的 JSON 中找到 "chat":{"id": -100xxxxxxxxx}
 BOT_CHAT_ID=-1001234567890
+
+# ============ 代理配置（可选）============
+# 如果服务器无法直接访问 Telegram API，可以启用代理
+# 注意：海外服务器通常不需要代理
+
+# 是否启用代理（默认 false）
+# TELEGRAM_PROXY_ENABLED=true
+
+# 代理服务器地址（默认 127.0.0.1）
+# TELEGRAM_PROXY_HOST=127.0.0.1
+
+# 代理服务器端口（默认 7890）
+# TELEGRAM_PROXY_PORT=7890
 ```
 
 #### 3. 启动服务

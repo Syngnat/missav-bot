@@ -17,21 +17,22 @@ import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
-import org.telegram.telegrambots.meta.api.methods.send.SendVideo;
-import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Slf4j
 @Component
+@SuppressWarnings("deprecation")
 public class MissavBot extends TelegramLongPollingBot {
+
+    private static final int TITLE_MAX_LENGTH = 30;
 
     private final ISubscriptionService subscriptionService;
     private final VideoMapper videoMapper;
@@ -45,10 +46,11 @@ public class MissavBot extends TelegramLongPollingBot {
     @Value("${telegram.bot.username:MissavBot}")
     private String botUsername;
 
-    public MissavBot(ISubscriptionService subscriptionService, VideoMapper videoMapper,
+    public MissavBot(DefaultBotOptions botOptions,
+                     ISubscriptionService subscriptionService, VideoMapper videoMapper,
                      ICrawlerService crawlerService, IPushService pushService,
                      TelegramMessageService telegramMessageService) {
-        super(createBotOptions());
+        super(botOptions);
         this.subscriptionService = subscriptionService;
         this.videoMapper = videoMapper;
         this.crawlerService = crawlerService;
@@ -57,13 +59,6 @@ public class MissavBot extends TelegramLongPollingBot {
 
         // 设置 TelegramMessageService 的 bot 实例
         this.telegramMessageService.setBot(this);
-    }
-
-    private static DefaultBotOptions createBotOptions() {
-        DefaultBotOptions options = new DefaultBotOptions();
-        options.setGetUpdatesTimeout(75);  // 增加轮询超时到 75 秒
-        options.setMaxThreads(1);  // 减少线程数
-        return options;
     }
 
     @PostConstruct
@@ -87,6 +82,7 @@ public class MissavBot extends TelegramLongPollingBot {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public String getBotToken() {
         return botToken;
     }
@@ -274,7 +270,7 @@ public class MissavBot extends TelegramLongPollingBot {
         for (Video video : videos) {
             if (count >= 10) break;
             sb.append("• ").append(video.getCode())
-              .append(" - ").append(truncate(video.getTitle(), 30))
+              .append(" - ").append(truncateTitle(video.getTitle()))
               .append("\n");
             count++;
         }
@@ -288,7 +284,7 @@ public class MissavBot extends TelegramLongPollingBot {
      * 查看最新视频
      */
     private void handleLatest(Long chatId, String args) {
-        int page = 1;
+        int page;
         if (!args.isEmpty()) {
             try {
                 page = Integer.parseInt(args);
@@ -296,6 +292,8 @@ public class MissavBot extends TelegramLongPollingBot {
             } catch (NumberFormatException e) {
                 page = 1;
             }
+        } else {
+            page = 1;
         }
 
         List<Video> videos = videoMapper.selectTop50ByCreatedTimeDesc();
@@ -564,7 +562,10 @@ public class MissavBot extends TelegramLongPollingBot {
 
     /**
      * 推送视频到聊天
+     * @deprecated 使用 {@link com.missav.bot.push.service.IPushService#pushVideoToChat(Video, Long)} 代替
      */
+    @Deprecated
+    @SuppressWarnings("unused")
     public boolean pushVideo(Long chatId, Video video) {
         try {
             String caption = telegramMessageService.formatVideoMessage(video);
@@ -600,8 +601,8 @@ public class MissavBot extends TelegramLongPollingBot {
         }
     }
 
-    private String truncate(String text, int maxLength) {
+    private String truncateTitle(String text) {
         if (text == null) return "";
-        return text.length() <= maxLength ? text : text.substring(0, maxLength) + "...";
+        return text.length() <= TITLE_MAX_LENGTH ? text : text.substring(0, TITLE_MAX_LENGTH) + "...";
     }
 }
