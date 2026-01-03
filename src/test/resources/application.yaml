@@ -1,0 +1,15 @@
+telegram:
+  bot:
+    token: ${BOT_TOKEN:test-token}
+    username: ${BOT_USERNAME:test-bot}
+    default-chat-id: ${BOT_CHAT_ID:0}
+  proxy:
+    enabled: true  # 测试环境启用代理
+    host: ${TELEGRAM_PROXY_HOST:127.0.0.1}
+    port: ${TELEGRAM_PROXY_PORT:7890}
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/missav_bot_test?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
